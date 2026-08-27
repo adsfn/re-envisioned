@@ -2482,8 +2482,8 @@ function initContractorsMap(){
 
   contractorsMapInstance = L.map('contractorsMap', { scrollWheelZoom: true, zoomControl: false }).setView([40.7128, -73.95], 11);
   L.control.zoom({ position: 'bottomright' }).addTo(contractorsMapInstance);
-  L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=cb1_29k3_1_3ddccf7ac4f6966c52d3e52c', {
-    attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; OpenStreetMap contributors',
+  L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_29k3_1_3ddccf7ac4f6966c52d3e52c', {
+    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap contributors',
     maxZoom: 19
   }).addTo(contractorsMapInstance);
 
