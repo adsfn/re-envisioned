@@ -665,7 +665,13 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
           <div class="search-divider"></div>
           <div class="search-field" style="min-width:100px;">
             <label>Distance</label>
-            <select><option>5 mi</option><option>10 mi</option><option>25 mi</option><option>50 mi</option></select>
+            <select id="heroSearchDistance">
+              <option value="3">3 mi</option>
+              <option value="5">5 mi</option>
+              <option value="10">10 mi</option>
+              <option value="15">15 mi</option>
+              <option value="any">Any distance</option>
+            </select>
           </div>
           <button class="search-btn" onclick="performSearch()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> Search</button>
         </div>
@@ -1002,11 +1008,12 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
         </div>
         <div class="filter-group">
           <label>Distance</label>
-          <select onchange="applyFilters()">
+          <select id="filterDistance" onchange="applyFilters()">
             <option value="any">Any distance</option>
+            <option value="3">Within 3 mi</option>
             <option value="5">Within 5 mi</option>
             <option value="10">Within 10 mi</option>
-            <option value="25">Within 25 mi</option>
+            <option value="15">Within 15 mi</option>
           </select>
         </div>
         <div class="filter-group">
@@ -2362,6 +2369,8 @@ async function submitContractorForm(){
   const btn = document.getElementById('contractorSubmitBtn');
   btn.disabled = true; btn.textContent = 'Submitting...';
 
+  const geo = await geocodeServiceArea(area);
+
   const { error } = await supabaseClient.from('contractors').upsert({
     id: currentUser.id,
     business_name: bizName,
@@ -2369,7 +2378,9 @@ async function submitContractorForm(){
     bio,
     service_area: area,
     years_experience: years,
-    license_number: license
+    license_number: license,
+    lat: geo ? geo.lat : null,
+    lng: geo ? geo.lng : null
   });
 
   btn.disabled = false; btn.textContent = 'Create my contractor profile';
@@ -2408,7 +2419,7 @@ async function loadContractorsFromSupabase(){
     .from('contractors')
     .select(`
       id, business_name, trade, bio, service_area, hourly_rate,
-      years_experience, is_verified, rating, review_count,
+      years_experience, is_verified, rating, review_count, lat, lng,
       profiles ( first_name, last_name, avatar_url )
     `)
     .order('rating', { ascending: false });
@@ -2447,12 +2458,18 @@ function renderContractorCards(){
     const verifiedBadge = c.is_verified
       ? `<span class="badge-verified"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 6 9 17l-5-5"/></svg> Verified</span>`
       : '';
-    return `<div class="contractor-card real-card" data-rating="${rating}" data-price="${maxPrice}" onclick="viewContractorProfile('${c.id}')">
+    let dist = null;
+    if (searchedZipCoords && c.lat != null && c.lng != null) {
+      dist = distanceMiles(searchedZipCoords.lat, searchedZipCoords.lng, c.lat, c.lng);
+    }
+    const distAttr = dist != null ? dist.toFixed(2) : '';
+    const distBadge = dist != null ? ` · ${dist < 0.1 ? '<0.1' : dist.toFixed(1)} mi away` : '';
+    return `<div class="contractor-card real-card" data-rating="${rating}" data-price="${maxPrice}" data-distance="${distAttr}" onclick="viewContractorProfile('${c.id}')">
       <div class="card-img" style="background-image:url('${img}');"><div class="card-img-overlay"></div>${verifiedBadge}<div class="card-rating"><span class="star"><svg class="ic star-ic" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.8 21.1 7 14.2 2 9.3l6.9-1z"/></svg></span>${rating}</div></div>
       <div class="card-body">
         <div class="card-name">${escapeHtml(name)}</div>
         <div class="card-trade">${escapeHtml(c.trade || '')}${c.service_area ? ' · ' + escapeHtml(c.service_area) : ''}</div>
-        <div class="card-meta"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg> ${c.years_experience || 0} yrs · ${c.review_count || 0} reviews</div>
+        <div class="card-meta"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg> ${c.years_experience || 0} yrs · ${c.review_count || 0} reviews${distBadge}</div>
         <div class="card-price-row"><div><div class="card-price-label">Est. price</div><div class="card-price">${price}</div></div></div>
         <div class="card-cta"><button class="btn-card primary" onclick="event.stopPropagation();selectedContractorId='${c.id}';requireAuth('chat')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Chat</button><button class="btn-card secondary" onclick="event.stopPropagation();showPage('estimate')">Estimate</button></div>
       </div>
@@ -2478,15 +2495,41 @@ function applyFilters(){
   cards.forEach(card => {
     const cardRating = parseFloat(card.dataset.rating || '0');
     const cardPrice = parseFloat(card.dataset.price || '0');
+    const cardDistanceRaw = card.dataset.distance;
+    const cardDistance = cardDistanceRaw ? parseFloat(cardDistanceRaw) : null;
     let matches = true;
     if (rating !== 'any' && cardRating < parseFloat(rating)) matches = false;
     if (price === 'low' && cardPrice >= 75) matches = false;
     if (price === 'mid' && (cardPrice < 75 || cardPrice > 125)) matches = false;
     if (price === 'high' && cardPrice < 125) matches = false;
-    // Distance and availability need real location/schedule data — skipped until those fields exist.
+    if (distance !== 'any') {
+      // If we don't know this pro's distance (no search location, or their
+      // profile isn't geocoded yet), we can't confirm they're in range —
+      // exclude rather than risk showing someone too far away.
+      if (cardDistance == null || cardDistance > parseFloat(distance)) matches = false;
+    }
+    // Availability needs real schedule data — skipped until that field exists.
     card.style.display = matches ? '' : 'none';
     if (matches) visibleCount++;
   });
+
+  // Sorting: reorder the actual DOM nodes so both list and any downstream
+  // reads of grid order stay consistent.
+  const sortableCards = cards.slice();
+  if (sort === 'distance') {
+    sortableCards.sort((a, b) => {
+      const da = a.dataset.distance ? parseFloat(a.dataset.distance) : Infinity;
+      const db = b.dataset.distance ? parseFloat(b.dataset.distance) : Infinity;
+      return da - db;
+    });
+  } else if (sort === 'rating') {
+    sortableCards.sort((a, b) => parseFloat(b.dataset.rating || '0') - parseFloat(a.dataset.rating || '0'));
+  } else if (sort === 'price_low') {
+    sortableCards.sort((a, b) => parseFloat(a.dataset.price || '0') - parseFloat(b.dataset.price || '0'));
+  }
+  if (sort !== 'recommended') {
+    sortableCards.forEach(card => grid.appendChild(card));
+  }
 
   let emptyState = grid.querySelector('.filter-empty');
   if (visibleCount === 0 && cards.length > 0) {
@@ -2534,6 +2577,37 @@ async function geocodeZip(zip) {
   }
 }
 
+// Best-effort geocode of a contractor's free-typed "service area" field
+// (e.g. "Brooklyn, NY 11201"). Prefers an embedded 5-digit zip if present
+// since that's the most precise; falls back to geocoding the raw text.
+async function geocodeServiceArea(text) {
+  if (!text) return null;
+  const zipMatch = text.match(/\b\d{5}\b/);
+  if (zipMatch) {
+    const byZip = await geocodeZip(zipMatch[0]);
+    if (byZip) return byZip;
+  }
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text + ', USA')}&format=json&limit=1`;
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) return null;
+    return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), place: text };
+  } catch (e) {
+    return null;
+  }
+}
+
+// Great-circle distance between two coordinates, in miles.
+function distanceMiles(lat1, lng1, lat2, lng2) {
+  const R = 3958.8; // Earth radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 // Draws (or moves) a pin + a soft transparent radius circle at the searched
 // zip's location on the contractors map.
 function renderSearchLocationMarker() {
@@ -2569,15 +2643,16 @@ const FALLBACK_TRADE_ICON = '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3
 
 function renderContractorMapMarkers(){
   if (!contractorsMapInstance) return;
-  contractorsMapInstance.eachLayer(layer => { if (layer instanceof L.Marker) contractorsMapInstance.removeLayer(layer); });
-  // NOTE: lat/lng aren't in the contractors table yet — add `lat` and `lng`
-  // numeric columns (or a PostGIS point) to plot real pins. Using a small
-  // spread around NYC as a placeholder center until then.
+  contractorsMapInstance.eachLayer(layer => { if (layer instanceof L.Marker && layer !== searchLocationMarker) contractorsMapInstance.removeLayer(layer); });
+  // Placeholder center used only as a fallback for contractors that haven't
+  // been geocoded yet (no lat/lng on their profile) so they still show up
+  // somewhere on the map instead of vanishing.
   const baseLat = 40.7128, baseLng = -73.95;
   LIVE_CONTRACTORS.forEach((c, i) => {
     const name = c.business_name || `${c.profiles?.first_name || ''} ${c.profiles?.last_name || ''}`.trim() || 'Revise Pro';
-    const lat = baseLat + (Math.sin(i * 137.5) * 0.04);
-    const lng = baseLng + (Math.cos(i * 137.5) * 0.04);
+    const hasRealCoords = c.lat != null && c.lng != null;
+    const lat = hasRealCoords ? c.lat : baseLat + (Math.sin(i * 137.5) * 0.04);
+    const lng = hasRealCoords ? c.lng : baseLng + (Math.cos(i * 137.5) * 0.04);
     const iconPath = DEFAULT_TRADE_ICONS[c.trade] || FALLBACK_TRADE_ICON;
     const icon = L.divIcon({
       className: '',
@@ -2587,11 +2662,15 @@ function renderContractorMapMarkers(){
       popupAnchor: [0, -34]
     });
     const price = c.hourly_rate ? `$${Number(c.hourly_rate).toFixed(0)}/hr` : 'Ask for quote';
+    const distHtml = (searchedZipCoords && hasRealCoords)
+      ? `<div class="mp-meta">${distanceMiles(searchedZipCoords.lat, searchedZipCoords.lng, lat, lng).toFixed(1)} mi away</div>`
+      : '';
     const popupHtml = `<div class="map-popup">
       <div class="mp-name">${escapeHtml(name)}</div>
       <div class="mp-trade">${escapeHtml(c.trade || '')}</div>
       <div class="mp-meta"><svg class="ic star-ic" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.8 21.1 7 14.2 2 9.3l6.9-1z"/></svg> ${Number(c.rating || 0).toFixed(1)} rating</div>
       <div class="mp-price">${price}</div>
+      ${distHtml}
       <div class="mp-actions">
         <button class="mp-chat" onclick="selectedContractorId='${c.id}';requireAuth('chat')">Chat</button>
         <button class="mp-view" onclick="viewContractorProfile('${c.id}')">View</button>
@@ -2604,7 +2683,12 @@ function renderContractorMapMarkers(){
 function initContractorsMap(){
   const mapEl = document.getElementById('contractorsMap');
   if (!mapEl || typeof L === 'undefined') return;
-  if (contractorsMapInstance) { contractorsMapInstance.invalidateSize(); renderSearchLocationMarker(); return; }
+  if (contractorsMapInstance) {
+    contractorsMapInstance.invalidateSize();
+    renderSearchLocationMarker();
+    if (contractorsLoaded) renderContractorMapMarkers();
+    return;
+  }
 
   contractorsMapInstance = L.map('contractorsMap', { scrollWheelZoom: true, zoomControl: false }).setView([40.7128, -73.95], 11);
   L.control.zoom({ position: 'bottomright' }).addTo(contractorsMapInstance);
@@ -2659,6 +2743,16 @@ async function performSearch(){
   }
   showPage('contractors');
   if (searchedZipCoords) setResultsView('map');
+
+  // Carry the distance picked in the hero search bar into the filter bar,
+  // and apply it immediately so results are pre-filtered by the time they land.
+  const heroDistance = document.getElementById('heroSearchDistance');
+  const filterDistance = document.getElementById('filterDistance');
+  if (heroDistance && filterDistance) {
+    filterDistance.value = heroDistance.value;
+    applyFilters();
+  }
+
   const grid = document.getElementById('contractorsGrid');
   if(!grid) return;
   grid.querySelectorAll('.skeleton-card').forEach(s=>s.remove());
