@@ -1857,6 +1857,19 @@ supabaseClient.auth.getSession().then(async ({ data: { session } }) => {
   }
 });
 
+// Deep-link support: ?page=privacy or #privacy opens that page directly on load.
+// Used for URLs handed to third parties (e.g. Google OAuth consent screen's
+// Privacy Policy / Terms of Service fields) that need to land on the actual
+// content instead of just the homepage.
+(function openDeepLinkedPageOnLoad() {
+  const params = new URLSearchParams(window.location.search);
+  const target = params.get('page') || (window.location.hash ? window.location.hash.slice(1) : null);
+  const validPages = ['privacy', 'terms'];
+  if (target && validPages.includes(target)) {
+    showPage(target);
+  }
+})();
+
 function showSuccess(title,msg){
   document.getElementById('signinForm').classList.add('hidden');
   document.getElementById('signupForm').classList.add('hidden');
