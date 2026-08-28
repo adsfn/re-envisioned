@@ -1636,7 +1636,7 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
       <div style="text-align:right;margin:8px 0 16px;"><a style="font-size:13px;color:#1558a8;cursor:pointer;font-weight:600;">Forgot password?</a></div>
       <button class="auth-btn" id="signinBtn" onclick="doSignIn()">Sign in</button>
       <div class="divider">or</div>
-      <button class="auth-btn" style="background:#fff;color:#334;border:1.5px solid #e2e8f0;display:flex;align-items:center;justify-content:center;gap:10px;" onclick="showToast('Google sign-in coming soon!', 'info')"><span style="font-size:18px;font-weight:700;">G</span> Continue with Google</button>
+      <button class="auth-btn" id="googleSigninBtn" style="background:#fff;color:#334;border:1.5px solid #e2e8f0;display:flex;align-items:center;justify-content:center;gap:10px;" onclick="doGoogleAuth()"><svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.98v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.98A9 9 0 0 0 0 9c0 1.45.35 2.83.98 4.03l2.97-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .98 4.97l2.97 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg> Continue with Google</button>
       <div class="auth-switch">Don't have an account? <a onclick="switchAuth('signup')">Sign up</a></div>
     </div>
     <div id="signupForm" class="hidden">
@@ -1654,6 +1654,8 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
       <div class="form-group-modal"><label>Password</label><input type="password" id="suPass" placeholder="At least 6 characters"><div class="field-error" id="suPassErr">Password must be at least 6 characters.</div></div>
       <div class="form-group-modal"><label>Confirm password</label><input type="password" id="suPass2" placeholder="Re-enter password"><div class="field-error" id="suPass2Err">Passwords do not match.</div></div>
       <button class="auth-btn" id="signupBtn" onclick="doSignUp()">Create account</button>
+      <div class="divider">or</div>
+      <button class="auth-btn" id="googleSignupBtn" style="background:#fff;color:#334;border:1.5px solid #e2e8f0;display:flex;align-items:center;justify-content:center;gap:10px;" onclick="doGoogleAuth()"><svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.98v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.98A9 9 0 0 0 0 9c0 1.45.35 2.83.98 4.03l2.97-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .98 4.97l2.97 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg> Continue with Google</button>
       <div class="auth-switch">Already have an account? <a onclick="switchAuth('signin')">Sign in</a></div>
     </div>
     <div id="successView" class="hidden" style="text-align:center;padding:10px 0;">
@@ -1789,6 +1791,39 @@ function doSignUp() {
   });
 }
 
+// Kicks off Google OAuth. Called from both the sign-in and sign-up forms.
+// Supabase redirects the browser to Google, then back to this same page —
+// so any state we want after the redirect (like the chosen role) needs to
+// survive in sessionStorage, not a JS variable.
+function doGoogleAuth() {
+  if (rateLimited('google-auth', 2000)) return;
+  // Only the sign-up form lets the user pick a role; stash it so we can
+  // apply it to the new profile once the redirect completes.
+  const onSignupForm = !document.getElementById('signupForm').classList.contains('hidden');
+  if (onSignupForm) sessionStorage.setItem('revisePendingRole', selectedRole);
+  supabaseClient.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin + window.location.pathname }
+  }).then(({ error }) => {
+    if (error) showToast(error.message, 'error');
+  });
+}
+
+// After the Google redirect lands back on the site, apply any role chosen
+// on the sign-up form and show the same success view as email sign-up.
+async function handlePostOAuthRole() {
+  const pendingRole = sessionStorage.getItem('revisePendingRole');
+  if (!pendingRole || !currentUser) return;
+  sessionStorage.removeItem('revisePendingRole');
+  if (currentUser.role !== pendingRole) {
+    const { error } = await supabaseClient.from('profiles').update({ role: pendingRole }).eq('id', currentUser.id);
+    if (!error) currentUser.role = pendingRole;
+  }
+  const msg = pendingRole === 'contractor' ? `Your contractor account is ready, ${currentUser.first}!` : `Welcome to Revise, ${currentUser.first}!`;
+  showSuccess('Account created!', msg);
+  if (pendingRole === 'contractor') pendingRedirect = 'contractor-signup';
+}
+
 // Pulls the logged-in user's row from public.profiles into the currentUser object
 // the rest of the app already reads from.
 async function loadCurrentUser() {
@@ -1809,9 +1844,17 @@ async function loadCurrentUser() {
   };
 }
 
-// On page load, check if there's already a logged-in session (e.g. user refreshed the page)
+// On page load, check if there's already a logged-in session (e.g. user refreshed
+// the page, or just landed back here after a Google OAuth redirect).
 supabaseClient.auth.getSession().then(async ({ data: { session } }) => {
-  if (session) { await loadCurrentUser(); updateNav(); }
+  if (session) {
+    await loadCurrentUser();
+    updateNav();
+    if (sessionStorage.getItem('revisePendingRole')) {
+      document.getElementById('authModal').classList.remove('hidden');
+      await handlePostOAuthRole();
+    }
+  }
 });
 
 function showSuccess(title,msg){
@@ -1851,7 +1894,7 @@ function cancelBooking(btn){
 }
 function requireAuth(page,action){if(currentUser){if(page==='chat')openChatWithContractor();else if(page)showPage(page);else if(action==='review')showToast('Review submitted! Thanks.');else if(action==='contractor')showToast('Profile submitted! You\'ll be live within 24hrs.');}else{pendingRedirect=page;openAuth('signin');}}
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
-function showPage(id){const wasAlreadyOnThisPage=document.getElementById('page-'+id)&&document.getElementById('page-'+id).classList.contains('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pg=document.getElementById('page-'+id);if(pg){pg.classList.add('active');window.scrollTo(0,0);}document.getElementById('mainNav').classList.remove('scrolled');if(id==='home'&&!wasAlreadyOnThisPage&&typeof playTypewriterHero==='function')playTypewriterHero(150);if(id==='edit-profile'&&typeof loadProfileForm==='function')loadProfileForm();if(id==='profile'&&typeof loadProfileData==='function')loadProfileData();if(id==='contractors'){if(!contractorsLoaded&&typeof loadContractorsFromSupabase==='function')loadContractorsFromSupabase();if(typeof initContractorsMap==='function')setTimeout(initContractorsMap,50);}}
+function showPage(id){const wasAlreadyOnThisPage=document.getElementById('page-'+id)&&document.getElementById('page-'+id).classList.contains('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pg=document.getElementById('page-'+id);if(pg){pg.classList.add('active');window.scrollTo(0,0);}document.getElementById('mainNav').classList.remove('scrolled');if(id==='privacy'||id==='terms'){history.replaceState(null,'','#'+id);}else if(window.location.hash){history.replaceState(null,'',window.location.pathname);}if(id==='home'&&!wasAlreadyOnThisPage&&typeof playTypewriterHero==='function')playTypewriterHero(150);if(id==='edit-profile'&&typeof loadProfileForm==='function')loadProfileForm();if(id==='profile'&&typeof loadProfileData==='function')loadProfileData();if(id==='contractors'){if(!contractorsLoaded&&typeof loadContractorsFromSupabase==='function')loadContractorsFromSupabase();if(typeof initContractorsMap==='function')setTimeout(initContractorsMap,50);}}
 
 // Pulls the selected contractor's real info into the profile page header/stats
 async function loadProfileData(){
@@ -2659,6 +2702,15 @@ function setHiwTab(pill, tab){
     origShowPage(id);
     requestAnimationFrame(observeAll);
   };
+
+  // Deep-link support: visiting the site with #privacy or #terms in the URL
+  // opens that page directly on load, so external links (e.g. Google's OAuth
+  // consent screen policy fields) can point straight at a specific page.
+  const DEEP_LINKABLE_PAGES = ['privacy', 'terms'];
+  const initialHash = window.location.hash.replace('#', '');
+  if (DEEP_LINKABLE_PAGES.includes(initialHash)) {
+    window.showPage(initialHash);
+  }
 })();
 </script>
 </body>
