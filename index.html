@@ -2510,21 +2510,24 @@ let searchLocationMarker = null;
 let searchLocationCircle = null;
 let searchedZipCoords = null;
 
-// Validates a 5-digit US zip and geocodes it via Zippopotam.us (free, no API key,
-// CORS-enabled). Returns {lat, lng, place} on success, or null if the zip
-// doesn't exist / the format is wrong.
+// Validates a 5-digit US zip and geocodes it via OpenStreetMap's Nominatim
+// (HTTPS, CORS-enabled, no API key required). Returns {lat, lng, place} on
+// success, or null if the zip doesn't exist / the format is wrong.
 async function geocodeZip(zip) {
   if (!/^\d{5}$/.test(zip)) return null;
   try {
-    const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
+    const url = `https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=us&format=json&limit=1&addressdetails=1`;
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
     if (!res.ok) return null;
     const data = await res.json();
-    const place = data.places && data.places[0];
-    if (!place) return null;
+    if (!Array.isArray(data) || data.length === 0) return null;
+    const result = data[0];
+    const addr = result.address || {};
+    const place = [addr.city || addr.town || addr.village || addr.hamlet, addr.state].filter(Boolean).join(', ');
     return {
-      lat: parseFloat(place.latitude),
-      lng: parseFloat(place.longitude),
-      place: `${place['place name']}, ${place['state abbreviation']}`
+      lat: parseFloat(result.lat),
+      lng: parseFloat(result.lon),
+      place: place || zip
     };
   } catch (e) {
     return null;
@@ -2611,8 +2614,10 @@ function initContractorsMap(){
   }).addTo(contractorsMapInstance);
 
   if (contractorsLoaded) renderContractorMapMarkers();
-  if (searchedZipCoords) renderSearchLocationMarker();
-  setTimeout(() => contractorsMapInstance.invalidateSize(), 200);
+  setTimeout(() => {
+    contractorsMapInstance.invalidateSize();
+    if (searchedZipCoords) renderSearchLocationMarker();
+  }, 200);
 }
 
 function setResultsView(view){
@@ -2653,6 +2658,7 @@ async function performSearch(){
     searchedZipCoords = null;
   }
   showPage('contractors');
+  if (searchedZipCoords) setResultsView('map');
   const grid = document.getElementById('contractorsGrid');
   if(!grid) return;
   grid.querySelectorAll('.skeleton-card').forEach(s=>s.remove());
