@@ -1271,86 +1271,7 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
         <button class="booking-tab" onclick="filterBookings(this,'completed')">Completed</button>
       </div>
       <div id="bookingsList" style="display:flex;flex-direction:column;gap:16px;margin-top:20px;">
-        <div class="booking-card">
-          <div class="booking-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M12 2v9.5"/><path d="M5 14.5a7 6 0 0 1 14 0"/><path d="M3.5 14.5h17"/><path d="M6.5 14.5c0 2.2 1.3 4 3 5"/><path d="M17.5 14.5c0 2.2-1.3 4-3 5"/></svg></div>
-          <div class="booking-body">
-            <div class="booking-top">
-              <div>
-                <div class="booking-business">Mike's Plumbing Co.</div>
-                <div class="booking-trade">Pipe repair &amp; leak fix</div>
-              </div>
-              <span class="booking-status status-upcoming">Upcoming</span>
-            </div>
-            <div class="booking-meta">
-              <span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg> Jul 28, 2026 &middot; 8:00 AM</span>
-              <span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg> Brooklyn, NY</span>
-            </div>
-            <div class="booking-bottom">
-              <div class="booking-price">$218 est.</div>
-              <div class="booking-actions"><button class="btn-card secondary" style="width:auto;padding:8px 16px;" onclick="requireAuth('chat')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Chat</button><button class="btn-card secondary" style="width:auto;padding:8px 16px;" onclick="openSchedule()">Reschedule</button><button class="btn-card secondary" style="width:auto;padding:8px 16px;color:#dc2626;border-color:#fecaca;" onclick="cancelBooking(this)">Cancel</button></div>
-            </div>
-          </div>
-        </div>
-        <div class="booking-card">
-          <div class="booking-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg></div>
-          <div class="booking-body">
-            <div class="booking-top">
-              <div>
-                <div class="booking-business">PowerUp Electric</div>
-                <div class="booking-trade">Panel inspection</div>
-              </div>
-              <span class="booking-status status-upcoming">Upcoming</span>
-            </div>
-            <div class="booking-meta">
-              <span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg> Aug 2, 2026 &middot; 2:00 PM</span>
-              <span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg> Queens, NY</span>
-            </div>
-            <div class="booking-bottom">
-              <div class="booking-price">$140 est.</div>
-              <div class="booking-actions"><button class="btn-card secondary" style="width:auto;padding:8px 16px;" onclick="requireAuth('chat')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Chat</button><button class="btn-card secondary" style="width:auto;padding:8px 16px;" onclick="openSchedule()">Reschedule</button><button class="btn-card secondary" style="width:auto;padding:8px 16px;color:#dc2626;border-color:#fecaca;" onclick="cancelBooking(this)">Cancel</button></div>
-            </div>
-          </div>
-        </div>
-        <div class="booking-card">
-          <div class="booking-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z"/><path d="M2 21c0-3 1.9-5.4 5.1-6C9.5 14.5 12 13 13 12"/></svg></div>
-          <div class="booking-body">
-            <div class="booking-top">
-              <div>
-                <div class="booking-business">Green Thumb Landscapes</div>
-                <div class="booking-trade">Spring lawn cleanup</div>
-              </div>
-              <span class="booking-status status-completed">Completed</span>
-            </div>
-            <div class="booking-meta">
-              <span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg> Jun 12, 2026 &middot; 10:00 AM</span>
-              <span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg> Manhattan, NY</span>
-            </div>
-            <div class="booking-bottom">
-              <div class="booking-price">$310 paid</div>
-              <div class="booking-actions"><button class="btn-card primary" style="width:auto;padding:8px 16px;" onclick="showPage('profile')"><svg class="ic star-ic" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.8 21.1 7 14.2 2 9.3l6.9-1z"/></svg> Leave a review</button><button class="btn-card secondary" style="width:auto;padding:8px 16px;" onclick="showPage('contractors')">Book again</button></div>
-            </div>
-          </div>
-        </div>
-        <div class="booking-card">
-          <div class="booking-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M12 2v9.5"/><path d="M5 14.5a7 6 0 0 1 14 0"/><path d="M3.5 14.5h17"/><path d="M6.5 14.5c0 2.2 1.3 4 3 5"/><path d="M17.5 14.5c0 2.2-1.3 4-3 5"/></svg></div>
-          <div class="booking-body">
-            <div class="booking-top">
-              <div>
-                <div class="booking-business">Mike's Plumbing Co.</div>
-                <div class="booking-trade">Water heater flush</div>
-              </div>
-              <span class="booking-status status-completed">Completed</span>
-            </div>
-            <div class="booking-meta">
-              <span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg> May 3, 2026 &middot; 9:00 AM</span>
-              <span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg> Brooklyn, NY</span>
-            </div>
-            <div class="booking-bottom">
-              <div class="booking-price">$95 paid</div>
-              <div class="booking-actions"><button class="btn-card secondary" style="width:auto;padding:8px 16px;" onclick="showPage('contractors')">Book again</button></div>
-            </div>
-          </div>
-        </div>
+        <div style="text-align:center;padding:40px 0;color:#94a3b8;">Loading your bookings…</div>
       </div>
     </div>
   </div>
@@ -1944,25 +1865,151 @@ function filterBookings(el, type){
   document.querySelectorAll('.booking-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   document.querySelectorAll('#bookingsList .booking-card').forEach(card => {
-    const status = card.querySelector('.booking-status').textContent.trim().toLowerCase();
+    const status = card.dataset.filterStatus || '';
     const show = type === 'all' || status === type;
     card.style.display = show ? '' : 'none';
   });
 }
 
-function cancelBooking(btn){
-  const card = btn.closest('.booking-card');
-  const statusEl = card.querySelector('.booking-status');
-  statusEl.textContent = 'Cancelled';
-  statusEl.className = 'booking-status status-cancelled';
-  btn.closest('.booking-actions').innerHTML = '';
-  const activeTab = document.querySelector('.booking-tab.active');
-  if (activeTab) filterBookings(activeTab, activeTab.textContent.trim().toLowerCase());
+// Loads the current user's bookings (as homeowner or contractor, whichever
+// role they're in) and renders real cards — replacing the old static demo data.
+async function loadMyBookings() {
+  const list = document.getElementById('bookingsList');
+  if (!list || !currentUser) return;
+  const isContractor = currentUser.role === 'contractor';
+  const filterCol = isContractor ? 'contractor_id' : 'homeowner_id';
+
+  const { data: bookings, error } = await supabaseClient
+    .from('bookings')
+    .select(`
+      id, title, description, status, scheduled_at, price_amount, payment_status, completed_at,
+      homeowner:homeowner_id ( first_name, last_name ),
+      contractor:contractor_id ( business_name, trade )
+    `)
+    .eq(filterCol, currentUser.id)
+    .order('scheduled_at', { ascending: false });
+
+  if (error) {
+    list.innerHTML = `<div style="text-align:center;padding:40px 0;color:#dc2626;">Couldn't load bookings: ${escapeHtml(error.message)}</div>`;
+    return;
+  }
+  if (!bookings || bookings.length === 0) {
+    list.innerHTML = `<div style="text-align:center;padding:40px 0;color:#94a3b8;">No bookings yet.</div>`;
+    return;
+  }
+
+  list.innerHTML = bookings.map(b => renderBookingCard(b, isContractor)).join('');
+}
+
+function renderBookingCard(b, isContractor) {
+  const otherPartyName = isContractor
+    ? `${b.homeowner?.first_name || ''} ${b.homeowner?.last_name || ''}`.trim() || 'Homeowner'
+    : (b.contractor?.business_name || 'Contractor');
+  const trade = !isContractor ? (b.contractor?.trade || '') : '';
+  const when = b.scheduled_at
+    ? new Date(b.scheduled_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+    : 'Not scheduled yet';
+
+  // filterStatus drives the All/Upcoming/Completed tabs above.
+  const filterStatus = b.status === 'completed' ? 'completed' : 'upcoming';
+  const statusLabel = cap(b.status || 'pending');
+  const statusClass = `status-${b.status === 'completed' ? 'completed' : (b.status === 'cancelled' ? 'cancelled' : 'upcoming')}`;
+
+  let priceHtml, actionsHtml;
+  if (b.status === 'completed' && b.price_amount != null) {
+    priceHtml = `<div class="booking-price">$${Number(b.price_amount).toFixed(2)} ${b.payment_status === 'paid' ? 'paid' : 'due'}</div>`;
+  } else {
+    priceHtml = `<div class="booking-price">Est. pending</div>`;
+  }
+
+  const actions = [];
+  if (isContractor) {
+    if (b.status !== 'completed' && b.status !== 'cancelled') {
+      actions.push(`<button class="btn-card primary" style="width:auto;padding:8px 16px;" onclick="markBookingComplete('${b.id}')">Mark complete</button>`);
+    }
+  } else {
+    if (b.status === 'completed' && b.payment_status === 'unpaid') {
+      actions.push(`<button class="btn-card primary" style="width:auto;padding:8px 16px;" onclick="payForBooking('${b.id}')">Pay $${Number(b.price_amount || 0).toFixed(2)} now</button>`);
+    }
+    if (b.status === 'completed' && b.payment_status === 'paid') {
+      actions.push(`<button class="btn-card secondary" style="width:auto;padding:8px 16px;" onclick="showPage('profile')">Leave a review</button>`);
+    }
+    if (b.status !== 'completed' && b.status !== 'cancelled') {
+      actions.push(`<button class="btn-card secondary" style="width:auto;padding:8px 16px;color:#dc2626;border-color:#fecaca;" onclick="cancelBooking('${b.id}', this)">Cancel</button>`);
+    }
+  }
+  actionsHtml = actions.join('');
+
+  return `<div class="booking-card" data-filter-status="${filterStatus}">
+    <div class="booking-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M12 2v9.5"/><path d="M5 14.5a7 6 0 0 1 14 0"/><path d="M3.5 14.5h17"/><path d="M6.5 14.5c0 2.2 1.3 4 3 5"/><path d="M17.5 14.5c0 2.2-1.3 4-3 5"/></svg></div>
+    <div class="booking-body">
+      <div class="booking-top">
+        <div>
+          <div class="booking-business">${escapeHtml(otherPartyName)}</div>
+          <div class="booking-trade">${escapeHtml(b.title || trade || '')}</div>
+        </div>
+        <span class="booking-status ${statusClass}">${statusLabel}</span>
+      </div>
+      <div class="booking-meta">
+        <span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg> ${when}</span>
+      </div>
+      <div class="booking-bottom">
+        ${priceHtml}
+        <div class="booking-actions">${actionsHtml}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// Contractor action: prompts for the final price and marks the job done.
+// This is the trigger that unlocks payment on the homeowner's side.
+async function markBookingComplete(bookingId) {
+  if (rateLimited('markComplete', 2000)) return;
+  const priceStr = prompt('Final price for this job ($):');
+  if (priceStr === null) return;
+  const price = parseFloat(priceStr);
+  if (isNaN(price) || price <= 0) { showToast('Enter a valid amount.', 'error'); return; }
+
+  const { error } = await supabaseClient
+    .from('bookings')
+    .update({ status: 'completed', price_amount: price, completed_at: new Date().toISOString() })
+    .eq('id', bookingId);
+
+  if (error) { showToast(error.message, 'error'); return; }
+  showToast('Job marked complete — the homeowner can now pay.', 'success');
+  loadMyBookings();
+}
+
+async function cancelBooking(bookingId, btn) {
+  if (rateLimited('cancelBooking', 2000)) return;
+  const { error } = await supabaseClient.from('bookings').update({ status: 'cancelled' }).eq('id', bookingId);
+  if (error) { showToast(error.message, 'error'); return; }
   showToast('Booking cancelled', 'info');
+  loadMyBookings();
+}
+
+// Homeowner action: calls the create-checkout-session Edge Function and
+// redirects to Stripe's hosted checkout page for this specific job.
+async function payForBooking(bookingId) {
+  if (rateLimited('payForBooking', 3000)) return;
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { showToast('Please sign in again.', 'error'); return; }
+  try {
+    const res = await fetch(`${EDGE_FUNCTIONS_URL}/create-checkout-session`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ booking_id: bookingId })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Something went wrong');
+    window.location.href = data.url;
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
 }
 function requireAuth(page,action){if(currentUser){if(page==='chat')openChatWithContractor();else if(page)showPage(page);else if(action==='review')showToast('Review submitted! Thanks.');else if(action==='contractor')showToast('Profile submitted! You\'ll be live within 24hrs.');}else{pendingRedirect=page;openAuth('signin');}}
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
-function showPage(id){const wasAlreadyOnThisPage=document.getElementById('page-'+id)&&document.getElementById('page-'+id).classList.contains('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pg=document.getElementById('page-'+id);if(pg){pg.classList.add('active');window.scrollTo(0,0);}document.getElementById('mainNav').classList.remove('scrolled');if(id==='privacy'||id==='terms'){history.replaceState(null,'','#'+id);}else if(window.location.hash){history.replaceState(null,'',window.location.pathname);}if(id==='home'&&!wasAlreadyOnThisPage&&typeof playTypewriterHero==='function')playTypewriterHero(150);if(id==='edit-profile'&&typeof loadProfileForm==='function')loadProfileForm();if(id==='profile'&&typeof loadProfileData==='function')loadProfileData();if(id==='contractors'){if(!contractorsLoaded&&typeof loadContractorsFromSupabase==='function')loadContractorsFromSupabase();if(typeof initContractorsMap==='function')setTimeout(initContractorsMap,50);}if(id==='my-bookings'&&typeof checkContractorStripeStatus==='function')checkContractorStripeStatus();}
+function showPage(id){const wasAlreadyOnThisPage=document.getElementById('page-'+id)&&document.getElementById('page-'+id).classList.contains('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pg=document.getElementById('page-'+id);if(pg){pg.classList.add('active');window.scrollTo(0,0);}document.getElementById('mainNav').classList.remove('scrolled');if(id==='privacy'||id==='terms'){history.replaceState(null,'','#'+id);}else if(window.location.hash){history.replaceState(null,'',window.location.pathname);}if(id==='home'&&!wasAlreadyOnThisPage&&typeof playTypewriterHero==='function')playTypewriterHero(150);if(id==='edit-profile'&&typeof loadProfileForm==='function')loadProfileForm();if(id==='profile'&&typeof loadProfileData==='function')loadProfileData();if(id==='contractors'){if(!contractorsLoaded&&typeof loadContractorsFromSupabase==='function')loadContractorsFromSupabase();if(typeof initContractorsMap==='function')setTimeout(initContractorsMap,50);}if(id==='my-bookings'){if(typeof checkContractorStripeStatus==='function')checkContractorStripeStatus();if(typeof loadMyBookings==='function')loadMyBookings();}}
 
 // Pulls the selected contractor's real info into the profile page header/stats
 async function loadProfileData(){
