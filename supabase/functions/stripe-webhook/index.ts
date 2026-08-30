@@ -16,17 +16,18 @@
 //                                  destination (checkout.session.completed).
 //                                  These are two SEPARATE destinations in
 //                                  Stripe pointing at this same function URL,
-//                                  each with its own secret — Stripe scopes
-//                                  connected-account events and platform
-//                                  events into different destinations, so
-//                                  one endpoint here needs to accept both.
+//                                  each with its own secret.
+//
+// NOTE: verification tries each configured secret in turn rather than
+// passing an array straight into constructEventAsync. Passing an array
+// is supported by newer stripe-node versions in theory, but proved
+// unreliable in this Deno edge runtime — a manual per-secret loop is the
+// more robust pattern and makes failures easier to diagnose (we log
+// exactly how many secrets were tried).
 //
 // IMPORTANT: this endpoint must have "Enforce JWT Verification" turned OFF
 // in the Supabase dashboard. Stripe has no Supabase session token to send —
 // it authenticates itself with a signature instead, which we verify below.
-// You'll also need to add the checkout.session.completed event to this
-// same webhook endpoint in Stripe (Developers > Webhooks > your endpoint >
-// add event), the same way account.updated was added.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import Stripe from "npm:stripe@17";
@@ -35,21 +36,47 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
   apiVersion: "2024-06-20",
 });
+
 // Both destinations point at this same function, each with its own secret.
-// Passing an array lets Stripe's SDK accept a signature matching either one.
+// Trim in case of any stray whitespace picked up when the secret was set.
 const webhookSecrets = [
   Deno.env.get("STRIPE_WEBHOOK_SECRET"),
   Deno.env.get("STRIPE_WEBHOOK_SECRET_PLATFORM"),
-].filter((s): s is string => !!s);
+]
+  .filter((s): s is string => !!s)
+  .map((s) => s.trim());
 
 const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
+// Tries each configured secret in turn until one verifies successfully.
+// Throws the last error if none of them match.
+async function verifyWithAnySecret(
+  rawBody: string,
+  signature: string,
+  secrets: string[]
+): Promise<Stripe.Event> {
+  let lastError: unknown = null;
+  for (const secret of secrets) {
+    try {
+      return await stripe.webhooks.constructEventAsync(rawBody, signature, secret);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError ?? new Error("No webhook secrets configured");
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
+  }
+
+  if (webhookSecrets.length === 0) {
+    console.error("No STRIPE_WEBHOOK_SECRET or STRIPE_WEBHOOK_SECRET_PLATFORM configured");
+    return new Response("Server misconfigured: no webhook secrets set", { status: 500 });
   }
 
   // Stripe signs the raw request body — we must verify against the exact
@@ -64,9 +91,12 @@ Deno.serve(async (req) => {
 
   let event: Stripe.Event;
   try {
-    event = await stripe.webhooks.constructEventAsync(rawBody, signature, webhookSecrets);
+    event = await verifyWithAnySecret(rawBody, signature, webhookSecrets);
   } catch (err) {
-    console.error("Webhook signature verification failed:", err);
+    console.error(
+      `Webhook signature verification failed against all ${webhookSecrets.length} configured secret(s):`,
+      err
+    );
     return new Response(`Webhook signature verification failed`, { status: 400 });
   }
 

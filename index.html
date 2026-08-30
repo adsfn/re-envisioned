@@ -413,7 +413,7 @@ nav.scrolled .btn-nav-outline:hover { background: #1558a8; color: #fff; }
 .review-img { width: 68px; height: 68px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 26px; }
 
 /* CHAT */
-.chat-container { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.chat-container { display: flex; flex-direction: column; flex: 1; min-height: 0; margin-top: 64px; }
 .chat-header { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 16px 24px; display: flex; align-items: center; gap: 14px; box-shadow: 0 2px 12px rgba(0,0,0,.05); }
 .chat-avatar { width: 44px; height: 44px; border-radius: 50%; background: #dbeafe; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
 .chat-name { font-weight: 700; font-size: 16px; }
@@ -434,6 +434,21 @@ nav.scrolled .btn-nav-outline:hover { background: #1558a8; color: #fff; }
 .icon-btn { background: none; border: none; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; color: #889; transition: all .15s; }
 .icon-btn:hover { background: #eef3fb; color: #1558a8; }
 .send-btn { background: #1558a8; color: #fff; border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; box-shadow: 0 2px 10px rgba(21,88,168,.3); }
+
+/* Modernized conversation list (Messages inbox) */
+.convo-card { background: #fff; border-radius: 16px; padding: 14px 16px; display: flex; gap: 14px; align-items: center; cursor: pointer; box-shadow: 0 1px 3px rgba(15,52,96,.06); border: 1px solid transparent; transition: box-shadow .18s, transform .18s, border-color .18s; }
+.convo-card:hover { box-shadow: 0 8px 24px rgba(21,88,168,.14); transform: translateY(-2px); border-color: #dbeafe; }
+.convo-avatar-wrap { position: relative; flex-shrink: 0; }
+.convo-avatar { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #1558a8, #0f3460); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700; letter-spacing: .3px; }
+.convo-online-dot { position: absolute; bottom: 1px; right: 1px; width: 12px; height: 12px; border-radius: 50%; background: #22c55e; border: 2.5px solid #fff; }
+.convo-body { flex: 1; min-width: 0; }
+.convo-top-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.convo-name { font-weight: 700; font-size: 15px; color: #1a2535; }
+.convo-time { font-size: 12px; color: #94a3b8; flex-shrink: 0; }
+.convo-preview { font-size: 13px; color: #667; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.send-btn-pill { background: #1558a8; color: #fff; border: none; padding: 0 22px; height: 44px; border-radius: 22px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; font-size: 14px; font-weight: 700; letter-spacing: .2px; box-shadow: 0 4px 14px rgba(21,88,168,.28); transition: transform .15s, box-shadow .15s; }
+.send-btn-pill:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(21,88,168,.36); }
+.send-btn-pill:active { transform: translateY(0); }
 
 /* FORMS */
 .form-card { background: #fff; border-radius: 20px; padding: 32px; margin: 24px 40px; box-shadow: 0 2px 16px rgba(0,0,0,.06); }
@@ -1066,21 +1081,18 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
   <div class="chat-container">
     <div class="chat-header">
       <button class="back-btn" onclick="showPage('profile')" style="padding:0;margin-right:4px;"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg></button>
-      <div class="chat-avatar"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M12 2v9.5"/><path d="M5 14.5a7 6 0 0 1 14 0"/><path d="M3.5 14.5h17"/><path d="M6.5 14.5c0 2.2 1.3 4 3 5"/><path d="M17.5 14.5c0 2.2-1.3 4-3 5"/></svg></div>
-      <div><div class="chat-name" id="chatContractorName">Mike's Plumbing Co.</div><div class="chat-status">● Online · Usually replies in minutes</div></div>
+      <div class="convo-avatar-wrap"><div class="convo-avatar" id="chatHeaderAvatar" style="width:44px;height:44px;font-size:15px;">?</div><div class="convo-online-dot"></div></div>
+      <div><div class="chat-name" id="chatContractorName">Loading…</div><div class="chat-status">● Online</div></div>
       <button class="btn-card secondary" onclick="openSchedule()" style="margin-left:auto;width:auto;padding:9px 16px;border-radius:12px;"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg> Schedule</button>
     </div>
     <div class="chat-messages" id="chatMessages">
-      <div class="msg them"><div class="msg-bubble">Hi! Thanks for reaching out. I'm Mike. What plumbing issue can I help you with today?</div><div class="msg-time">10:02 AM</div></div>
-      <div class="msg me"><div class="msg-bubble">Hi Mike! I've got a leaking pipe under my kitchen sink.</div><div class="msg-time">10:05 AM</div></div>
-      <div class="msg me"><div class="photo-msg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.5"/></svg> photo_leak.jpg</div><div class="msg-time">10:05 AM</div></div>
-      <div class="msg them"><div class="msg-bubble">Thanks for the photo! That looks like a compression fitting failure. I can fix that same day. Would $110–$130 work?</div><div class="msg-time">10:08 AM</div></div>
+      <div style="text-align:center;color:#889;font-size:13px;padding:20px;">Loading messages...</div>
     </div>
     <div class="chat-input">
       <button class="icon-btn" onclick="addPhotoMsg()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
       <input type="text" placeholder="Type a message..." id="chatInput" maxlength="1000" oninput="stripDangerousChars(this)" onkeydown="if(event.key==='Enter')sendMsg()">
       <button class="icon-btn" onclick="openSchedule()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></button>
-      <button class="send-btn" onclick="sendMsg()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
+      <button class="send-btn-pill" onclick="sendMsg()">Send <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" style="width:15px;height:15px;"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
     </div>
   </div>
 </div>
@@ -1171,12 +1183,8 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
   <div class="page-content">
     <div class="inner-hero"><h1>Messages</h1><p>Your conversations with local pros</p></div>
     <div style="padding:32px 40px;">
-      <div style="display:flex;flex-direction:column;gap:12px;">
-        <div style="background:#fff;border-radius:16px;padding:18px;display:flex;gap:16px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.05);transition:all .2s;" onclick="showPage('chat')" onmouseover="this.style.boxShadow='0 6px 24px rgba(21,88,168,.12)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='0 2px 10px rgba(0,0,0,.05)';this.style.transform='none'">
-          <div style="width:52px;height:52px;border-radius:50%;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M12 2v9.5"/><path d="M5 14.5a7 6 0 0 1 14 0"/><path d="M3.5 14.5h17"/><path d="M6.5 14.5c0 2.2 1.3 4 3 5"/><path d="M17.5 14.5c0 2.2-1.3 4-3 5"/></svg></div>
-          <div style="flex:1;"><div style="display:flex;justify-content:space-between;"><span style="font-weight:700;font-size:15px;">Mike's Plumbing</span><span style="font-size:12px;color:#889;">10:08 AM</span></div><div style="font-size:13px;color:#667;margin-top:4px;">That looks like a compression fitting — can fix same day!</div></div>
-          <div style="width:22px;height:22px;background:#1558a8;border-radius:50%;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
-        </div>
+      <div id="chatListContainer" style="display:flex;flex-direction:column;gap:10px;">
+        <div style="text-align:center;padding:40px 0;color:#94a3b8;">Loading conversations...</div>
       </div>
     </div>
   </div>
@@ -2037,7 +2045,7 @@ async function payForBooking(bookingId) {
 }
 function requireAuth(page,action){if(currentUser){if(page==='chat')openChatWithContractor();else if(page)showPage(page);else if(action==='review')showToast('Review submitted! Thanks.');else if(action==='contractor')showToast('Profile submitted! You\'ll be live within 24hrs.');}else{pendingRedirect=page;openAuth('signin');}}
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
-function showPage(id){const wasAlreadyOnThisPage=document.getElementById('page-'+id)&&document.getElementById('page-'+id).classList.contains('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pg=document.getElementById('page-'+id);if(pg){pg.classList.add('active');window.scrollTo(0,0);}document.getElementById('mainNav').classList.remove('scrolled');if(id==='privacy'||id==='terms'){history.replaceState(null,'','#'+id);}else if(window.location.hash){history.replaceState(null,'',window.location.pathname);}if(id==='home'&&!wasAlreadyOnThisPage&&typeof playTypewriterHero==='function')playTypewriterHero(150);if(id==='edit-profile'&&typeof loadProfileForm==='function')loadProfileForm();if(id==='profile'&&typeof loadProfileData==='function')loadProfileData();if(id==='contractor-signup'&&typeof loadExistingPortfolioPhotos==='function')loadExistingPortfolioPhotos();if(id==='contractors'){if(!contractorsLoaded&&typeof loadContractorsFromSupabase==='function')loadContractorsFromSupabase();if(typeof initContractorsMap==='function')setTimeout(initContractorsMap,50);}if(id==='my-bookings'){if(typeof checkContractorStripeStatus==='function')checkContractorStripeStatus();if(typeof loadMyBookings==='function')loadMyBookings();}if(id==='estimate'&&typeof renderEstimateHeader==='function')renderEstimateHeader();}
+function showPage(id){const wasAlreadyOnThisPage=document.getElementById('page-'+id)&&document.getElementById('page-'+id).classList.contains('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pg=document.getElementById('page-'+id);if(pg){pg.classList.add('active');window.scrollTo(0,0);}document.getElementById('mainNav').classList.remove('scrolled');if(id==='privacy'||id==='terms'){history.replaceState(null,'','#'+id);}else if(window.location.hash){history.replaceState(null,'',window.location.pathname);}if(id==='home'&&!wasAlreadyOnThisPage&&typeof playTypewriterHero==='function')playTypewriterHero(150);if(id==='edit-profile'&&typeof loadProfileForm==='function')loadProfileForm();if(id==='profile'&&typeof loadProfileData==='function')loadProfileData();if(id==='contractor-signup'&&typeof loadExistingPortfolioPhotos==='function')loadExistingPortfolioPhotos();if(id==='chat-list'&&typeof loadChatList==='function')loadChatList();if(id==='contractors'){if(!contractorsLoaded&&typeof loadContractorsFromSupabase==='function')loadContractorsFromSupabase();if(typeof initContractorsMap==='function')setTimeout(initContractorsMap,50);}if(id==='my-bookings'){if(typeof checkContractorStripeStatus==='function')checkContractorStripeStatus();if(typeof loadMyBookings==='function')loadMyBookings();}if(id==='estimate'&&typeof renderEstimateHeader==='function')renderEstimateHeader();}
 
 // Pulls the selected contractor's real info into the profile page header/stats
 async function loadProfileData(){
@@ -2090,15 +2098,116 @@ async function openChatWithContractor(){
     currentChatBookingId = created.id;
   }
 
-  const chatNameEl = document.getElementById('chatContractorName');
-  if (chatNameEl) {
-    const c = await fetchContractorById(selectedContractorId);
-    chatNameEl.textContent = c ? (c.business_name || 'Revise Pro') : 'Revise Pro';
-  }
+  const c = await fetchContractorById(selectedContractorId);
+  setChatHeaderIdentity(c ? (c.business_name || 'Revise Pro') : 'Revise Pro');
 
   showPage('chat');
   await loadChatMessages();
   subscribeToChat();
+}
+
+// Sets both the header name and the initials avatar together, so the two
+// never fall out of sync when switching between conversations.
+function setChatHeaderIdentity(displayName){
+  const chatNameEl = document.getElementById('chatContractorName');
+  const chatAvatarEl = document.getElementById('chatHeaderAvatar');
+  const name = displayName || 'Conversation';
+  if (chatNameEl) chatNameEl.textContent = name;
+  if (chatAvatarEl) {
+    const initials = name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
+    chatAvatarEl.textContent = initials;
+  }
+}
+
+// Opens an existing thread directly by booking id — used from the Messages
+// inbox list, where the thread (and other party) is already known, unlike
+// openChatWithContractor() which is used when starting a NEW thread from a
+// contractor's profile page.
+async function openChatThread(bookingId, displayName){
+  currentChatBookingId = bookingId;
+  setChatHeaderIdentity(displayName);
+  showPage('chat');
+  await loadChatMessages();
+  subscribeToChat();
+}
+
+// Populates the Messages inbox with the user's real conversation threads.
+// Each booking row doubles as a thread; we pull the most recent message per
+// booking to show a preview, and resolve the other party's display name
+// depending on whether the current user is the homeowner or contractor side.
+async function loadChatList(){
+  const container = document.getElementById('chatListContainer');
+  if (!container || !currentUser) return;
+
+  const isContractor = currentUser.role === 'contractor';
+  const filterCol = isContractor ? 'contractor_id' : 'homeowner_id';
+
+  const { data: bookings, error } = await supabaseClient
+    .from('bookings')
+    .select(`
+      id, contractor_id, homeowner_id, created_at,
+      homeowner:homeowner_id ( first_name, last_name )
+    `)
+    .eq(filterCol, currentUser.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    container.innerHTML = `<div style="text-align:center;padding:40px 0;color:#dc2626;">Couldn't load messages: ${escapeHtml(error.message)}</div>`;
+    return;
+  }
+  if (!bookings || bookings.length === 0) {
+    container.innerHTML = `<div style="text-align:center;padding:40px 0;color:#94a3b8;">No conversations yet.</div>`;
+    return;
+  }
+
+  // Homeowner view needs each contractor's business name; contractor view
+  // already has the homeowner's name via the nested select above.
+  let contractorsById = {};
+  if (!isContractor) {
+    const contractorIds = [...new Set(bookings.map(b => b.contractor_id).filter(Boolean))];
+    if (contractorIds.length > 0) {
+      const { data: contractorRows } = await supabaseClient
+        .from('contractors')
+        .select('id, business_name')
+        .in('id', contractorIds);
+      (contractorRows || []).forEach(c => { contractorsById[c.id] = c; });
+    }
+  }
+
+  const bookingIds = bookings.map(b => b.id);
+  const { data: recentMessages } = await supabaseClient
+    .from('messages')
+    .select('booking_id, body, created_at')
+    .in('booking_id', bookingIds)
+    .order('created_at', { ascending: false });
+
+  // Keep only the newest message per booking (results are already newest-first).
+  const lastMessageByBooking = {};
+  (recentMessages || []).forEach(m => {
+    if (!lastMessageByBooking[m.booking_id]) lastMessageByBooking[m.booking_id] = m;
+  });
+
+  container.innerHTML = bookings.map(b => {
+    const displayName = isContractor
+      ? `${b.homeowner?.first_name || ''} ${b.homeowner?.last_name || ''}`.trim() || 'Homeowner'
+      : (contractorsById[b.contractor_id]?.business_name || 'Revise Pro');
+    const lastMsg = lastMessageByBooking[b.id];
+    const preview = lastMsg ? escapeHtml(lastMsg.body) : 'No messages yet — say hello!';
+    const time = lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+    const initials = displayName.split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
+    return `
+      <div class="convo-card" onclick="openChatThread('${b.id}', ${JSON.stringify(displayName)})">
+        <div class="convo-avatar-wrap">
+          <div class="convo-avatar">${escapeHtml(initials)}</div>
+          <div class="convo-online-dot"></div>
+        </div>
+        <div class="convo-body">
+          <div class="convo-top-row"><span class="convo-name">${escapeHtml(displayName)}</span><span class="convo-time">${time}</span></div>
+          <div class="convo-preview">${preview}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 async function loadChatMessages(){
