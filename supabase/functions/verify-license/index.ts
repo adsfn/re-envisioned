@@ -12,6 +12,18 @@
 // column names shown on the dataset page): license_type, license_number,
 // license_status, first_name, last_name, business_name.
 //
+// NAME MATCHING — why this exists:
+// A license NUMBER alone only proves that SOME license is real and active
+// in DOB's records — it says nothing about whether the person submitting
+// it actually holds that license. NYC's plumber/electrician license
+// numbers are small sequential integers, so a random guess has a real
+// chance of landing on someone else's genuinely active license. To guard
+// against that, this function also requires the contractor's submitted
+// name/business name to reasonably match the name DOB has on file for
+// that license (business_name, or first_name + last_name). This isn't a
+// legal identity check — it's a lightweight fuzzy string match — but it
+// closes the obvious "type in a stranger's real license number" gap.
+//
 // IMPORTANT CAVEAT — read before relying on this for "General Contractor":
 // New York City does NOT issue a "General Contractor" license through DOB.
 // There is no such license type in this (or any NYC) dataset. Homeowner-
@@ -65,12 +77,43 @@ function buildTypeFilter(licenseType: string): string | null {
   }
 }
 
+// Uppercases and strips everything but letters/digits/spaces, collapsing
+// whitespace — so "Gerard's Plumbing & Heating Corp." and "GERARDS
+// PLUMBING HEATING CORP" compare equal.
+function normalizeName(s: string | null | undefined): string {
+  return (s || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+// Lightweight fuzzy match: true if either normalized string contains the
+// other. Guards against trivial false positives from very short strings
+// (e.g. a single initial) matching everything.
+function namesLooselyMatch(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  if (a.length < 3 || b.length < 3) return a === b;
+  return a.includes(b) || b.includes(a);
+}
+
+function recordMatchesSubmittedName(submittedName: string, row: Record<string, string>): boolean {
+  const submitted = normalizeName(submittedName);
+  if (!submitted) return false;
+
+  const business = normalizeName(row.business_name);
+  const fullName = normalizeName(`${row.first_name || ""} ${row.last_name || ""}`);
+  const lastFirst = normalizeName(`${row.last_name || ""} ${row.first_name || ""}`);
+
+  return [business, fullName, lastFirst].some(candidate => namesLooselyMatch(submitted, candidate));
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
   }
 
-  let body: { licenseNumber?: string; licenseType?: string };
+  let body: { licenseNumber?: string; licenseType?: string; submittedName?: string };
   try {
     body = await req.json();
   } catch {
@@ -79,9 +122,13 @@ Deno.serve(async (req) => {
 
   const licenseNumberRaw = (body.licenseNumber || "").trim();
   const licenseType = (body.licenseType || "").trim();
+  const submittedName = (body.submittedName || "").trim();
 
   if (!/^[0-9]+$/.test(licenseNumberRaw)) {
     return new Response(JSON.stringify({ error: "licenseNumber must be numeric" }), { status: 400 });
+  }
+  if (!submittedName) {
+    return new Response(JSON.stringify({ error: "submittedName is required" }), { status: 400 });
   }
 
   const typeFilter = buildTypeFilter(licenseType);
@@ -127,16 +174,31 @@ Deno.serve(async (req) => {
     }
 
     // A license can have multiple historical rows (renewals, status
-    // changes). Prefer an ACTIVE row if one exists; otherwise report the
-    // most recently seen status so the person knows why it didn't pass.
-    const active = rows.find(r => (r.license_status || "").toUpperCase() === "ACTIVE");
-    const chosen = active || rows[0];
+    // changes). Only consider rows whose DOB name actually matches what
+    // the contractor submitted — a real, active license that belongs to
+    // someone else must NOT verify.
+    const matchingRows = rows.filter(r => recordMatchesSubmittedName(submittedName, r));
 
-    const businessName = chosen.business_name?.trim() || null;
+    if (matchingRows.length === 0) {
+      // The license number is real, but not registered to this person/
+      // business as far as DOB's records show.
+      return new Response(
+        JSON.stringify({ verified: false, status: "NAME_MISMATCH" }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const active = matchingRows.find(r => (r.license_status || "").toUpperCase() === "ACTIVE");
+    const chosen = active || matchingRows[0];
+
+    const matchedName =
+      chosen.business_name?.trim() ||
+      `${chosen.first_name || ""} ${chosen.last_name || ""}`.trim() ||
+      null;
     const status = (chosen.license_status || "UNKNOWN").toUpperCase();
 
     return new Response(
-      JSON.stringify({ verified: true, status, businessName }),
+      JSON.stringify({ verified: true, status, matchedName }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (err) {

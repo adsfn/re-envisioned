@@ -1145,12 +1145,12 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
     <div class="inner-hero"><button class="back-btn" onclick="showPage('home')" style="color:rgba(255,255,255,.8);padding:0 0 16px;"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg> Back</button><h1>Join Revise as a Pro</h1><p>Find local work, build your reputation, and grow your business.</p></div>
     <div class="form-card">
       <div class="form-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 11h6"/><path d="M9 15h6"/></svg> Your profile</div>
-      <div class="form-row"><div class="form-group"><label>Full name / Business name</label><input id="cBizName" placeholder="Mike's Plumbing Co." maxlength="80" oninput="businessNameChars(this);setFieldError('cBizName','cBizNameErr',false)"><div class="field-error" id="cBizNameErr">Please enter your name or business name.</div></div><div class="form-group"><label>Phone number</label><input id="cPhone" placeholder="(555) 000-0000" type="tel" maxlength="20" oninput="onlyPhoneChars(this);setFieldError('cPhone','cPhoneErr',false)"><div class="field-error" id="cPhoneErr">Please enter a valid phone number.</div></div></div>
+      <div class="form-row"><div class="form-group"><label>Full name / Business name</label><input id="cBizName" placeholder="Mike's Plumbing Co." maxlength="80" oninput="businessNameChars(this);setFieldError('cBizName','cBizNameErr',false);lastVerifiedLicense=null"><div class="field-error" id="cBizNameErr">Please enter your name or business name.</div></div><div class="form-group"><label>Phone number</label><input id="cPhone" placeholder="(555) 000-0000" type="tel" maxlength="20" oninput="onlyPhoneChars(this);setFieldError('cPhone','cPhoneErr',false)"><div class="field-error" id="cPhoneErr">Please enter a valid phone number.</div></div></div>
       <div class="form-row"><div class="form-group"><label>Years in business</label><input id="cYears" placeholder="e.g. 12" type="number" min="0" max="99" oninput="onlyDigits(this);setFieldError('cYears','cYearsErr',false)"><div class="field-error" id="cYearsErr">Please enter a valid number of years.</div></div><div class="form-group"><label>Service area (city/zip)</label><input id="cArea" placeholder="Brooklyn, NY 11201" maxlength="100" oninput="locationChars(this);setFieldError('cArea','cAreaErr',false)"><div class="field-error" id="cAreaErr">Please enter your service area.</div></div></div>
       <div class="form-group"><label>Services offered</label><div class="tags-row"><div class="tag selected" onclick="toggleTag(this)">Plumbing</div><div class="tag" onclick="toggleTag(this)">Electrical</div><div class="tag" onclick="toggleTag(this)">Landscaping</div><div class="tag" onclick="toggleTag(this)">Cleaning</div><div class="tag" onclick="toggleTag(this)">HVAC</div><div class="tag" onclick="toggleTag(this)">Renovation</div><div class="tag" onclick="toggleTag(this)">Painting</div><div class="tag" onclick="toggleTag(this)">Carpentry</div><div class="tag" onclick="toggleTag(this)">Roofing</div><div class="tag" onclick="toggleTag(this)">Handyman</div></div></div>
       <div class="form-group"><label>Available for emergency/urgent jobs?</label><div class="tags-row"><div class="tag selected" onclick="selectSingleTag(this)">Yes, 24/7</div><div class="tag" onclick="selectSingleTag(this)">Weekdays only</div><div class="tag" onclick="selectSingleTag(this)">No</div></div></div>
       <div class="form-group"><label>Bio / Experience summary</label><textarea id="cBio" placeholder="Describe your experience, specialties, and what makes you the best choice..." maxlength="800" oninput="stripDangerousChars(this);setFieldError('cBio','cBioErr',false)"></textarea><div class="field-error" id="cBioErr">Please write at least 30 characters about your experience.</div></div>
-      <div class="verify-box"><h4><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> License verification</h4><p style="font-size:13px;color:#15803d;margin-bottom:12px;">Enter your license number and we'll verify it with state records.</p><div class="verify-row"><select style="border:1.5px solid #86efac;border-radius:10px;padding:11px 12px;font-size:14px;background:#f0fdf4;"><option>NY — Plumber</option><option>NY — Electrician</option><option>NY — General Contractor</option></select><input id="cLicense" placeholder="License #" maxlength="30" oninput="onlyAlnumDash(this)" style="border:1.5px solid #86efac;border-radius:10px;padding:11px 12px;font-size:14px;flex:1;background:#f0fdf4;"><button class="verify-btn" onclick="verifyLicense()">Verify now</button></div><div class="field-error" id="cLicenseErr" style="margin-top:8px;">Please enter a license number to verify.</div></div>
+      <div class="verify-box"><h4><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> License verification</h4><p style="font-size:13px;color:#15803d;margin-bottom:12px;">Enter your license number and we'll verify it with state records.</p><div class="verify-row"><select id="cLicenseType" onchange="lastVerifiedLicense=null" style="border:1.5px solid #86efac;border-radius:10px;padding:11px 12px;font-size:14px;background:#f0fdf4;"><option value="MASTER PLUMBER">NY — Plumber</option><option value="ELECTRICAL CONTRACTOR">NY — Electrician</option><option value="GENERAL CONTRACTOR">NY — General Contractor</option></select><input id="cLicense" placeholder="License #" maxlength="30" oninput="onlyAlnumDash(this);lastVerifiedLicense=null" style="border:1.5px solid #86efac;border-radius:10px;padding:11px 12px;font-size:14px;flex:1;background:#f0fdf4;"><button class="verify-btn" onclick="verifyLicense()">Verify now</button></div><div class="field-error" id="cLicenseErr" style="margin-top:8px;">Please enter a license number to verify.</div></div>
       <div class="form-group" style="margin-top:20px;"><label>Insurance status</label><div class="tags-row"><div class="tag selected" onclick="toggleTag(this)">General liability</div><div class="tag" onclick="toggleTag(this)">Workers comp</div><div class="tag" onclick="toggleTag(this)">Bonded</div></div></div>
       <div class="form-group">
         <label>Upload certifications / licenses</label>
@@ -2725,11 +2725,58 @@ function validateContractorForm(){
   return ok;
 }
 
-function verifyLicense(){
+let lastVerifiedLicense = null; // { number, type, status } — cleared whenever the number/type changes
+
+async function verifyLicense(){
   const lic = document.getElementById('cLicense').value.trim();
-  const licOk = lic.length >= 4;
+  const licenseType = document.getElementById('cLicenseType').value;
+  const licOk = lic.length >= 1 && /^[0-9]+$/.test(lic);
   setFieldError('cLicense','cLicenseErr', !licOk);
-  if (licOk) showToast('License verified! Badge added.', 'success');
+  if (!licOk) {
+    showToast('License numbers are numeric — check the number and try again', 'error');
+    return;
+  }
+
+  // Cross-checking the submitted name against DOB's record is what
+  // prevents someone from typing in a stranger's real, active license
+  // number and having it pass — a license number alone only proves SOME
+  // license is active, not that it belongs to this contractor.
+  const submittedName = document.getElementById('cBizName')?.value.trim() || '';
+  if (!submittedName) {
+    showToast('Please enter your name or business name above before verifying', 'error');
+    return;
+  }
+
+  const btn = document.querySelector('.verify-btn');
+  const originalText = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Checking NYC DOB records...';
+
+  try {
+    const { data, error } = await supabaseClient.functions.invoke('verify-license', {
+      body: { licenseNumber: lic, licenseType, submittedName }
+    });
+
+    if (error) throw error;
+
+    if (data.verified && data.status === 'ACTIVE') {
+      lastVerifiedLicense = { number: lic, type: licenseType, status: data.status };
+      showToast(`Verified! Active NYC DOB license — ${data.matchedName || submittedName}`, 'success');
+    } else if (data.status === 'NAME_MISMATCH') {
+      lastVerifiedLicense = null;
+      showToast(`That license number is active in NYC DOB records, but it's registered to a different name/business — double check the number`, 'error');
+    } else if (data.verified) {
+      lastVerifiedLicense = null;
+      showToast(`Found in NYC DOB records, but status is "${data.status}" — not currently active`, 'error');
+    } else {
+      lastVerifiedLicense = null;
+      showToast('No matching active NYC DOB license found for that number and trade', 'error');
+    }
+  } catch (err) {
+    lastVerifiedLicense = null;
+    showToast('Could not reach license verification service — try again shortly', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = originalText;
+  }
 }
 
 async function submitContractorForm(){
@@ -2750,6 +2797,8 @@ async function submitContractorForm(){
     .map(t => t.textContent.trim());
   const trade = selectedTrades.find(t => !['Yes, 24/7','Weekdays only','No','General liability','Workers comp','Bonded'].includes(t)) || 'General';
   const license = document.getElementById('cLicense')?.value.trim() || null;
+  const licenseType = document.getElementById('cLicenseType')?.value || null;
+  const isVerified = !!(lastVerifiedLicense && lastVerifiedLicense.number === license && lastVerifiedLicense.type === licenseType);
 
   const btn = document.getElementById('contractorSubmitBtn');
   btn.disabled = true; btn.textContent = 'Submitting...';
@@ -2764,6 +2813,9 @@ async function submitContractorForm(){
     service_area: area,
     years_experience: years,
     license_number: license,
+    license_type: licenseType,
+    license_verified: isVerified,
+    license_verified_at: isVerified ? new Date().toISOString() : null,
     lat: geo ? geo.lat : null,
     lng: geo ? geo.lng : null,
     portfolio_urls: portfolioPhotos.filter(p => !p.uploading && p.publicUrl).map(p => p.publicUrl)
