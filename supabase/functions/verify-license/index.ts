@@ -55,11 +55,30 @@
 //   API. Get one free at https://data.cityofnewyork.us/profile/app_tokens.
 //   Not required — the function works without it, just at the lower
 //   unauthenticated request-per-second ceiling Socrata applies to anyone.
+//
+// SECURITY NOTE: on a successful, name-matched, ACTIVE result, this
+// function writes license_verified=true directly to the contractor's row
+// using the service role key — it does NOT rely on the frontend to relay
+// that result back into an upsert. A migration-added trigger
+// (protect_contractor_verification_fields) blocks any client-supplied
+// value for license_verified/review_status from ever taking effect, so
+// this function is the only path by which automated verification can
+// actually mark a contractor verified.
+//
+// Requires "Enforce JWT Verification" to stay ON for this function (unlike
+// stripe-webhook) — it identifies the caller from their own Supabase
+// session token, so it must reject requests without one.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const SOCRATA_RESOURCE_URL = "https://data.cityofnewyork.us/resource/sqcz-wui5.json";
 const APP_TOKEN = Deno.env.get("NYC_OPEN_DATA_APP_TOKEN"); // optional
+
+const supabaseAdmin = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+);
 
 // Maps the frontend's <select> values to a SoQL match against license_type.
 // Plumber has one exact DOB license_type string; electrician is matched
@@ -112,6 +131,17 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
   }
+
+  const authHeader = req.headers.get("Authorization") || "";
+  const jwt = authHeader.replace(/^Bearer\s+/i, "");
+  if (!jwt) {
+    return new Response(JSON.stringify({ error: "Missing auth token" }), { status: 401 });
+  }
+  const { data: userData, error: authError } = await supabaseAdmin.auth.getUser(jwt);
+  if (authError || !userData?.user) {
+    return new Response(JSON.stringify({ error: "Invalid or expired session" }), { status: 401 });
+  }
+  const callerId = userData.user.id;
 
   let body: { licenseNumber?: string; licenseType?: string; submittedName?: string };
   try {
@@ -196,6 +226,53 @@ Deno.serve(async (req) => {
       `${chosen.first_name || ""} ${chosen.last_name || ""}`.trim() ||
       null;
     const status = (chosen.license_status || "UNKNOWN").toUpperCase();
+    const isVerified = status === "ACTIVE";
+
+    if (isVerified) {
+      // This is the ONLY place license_verified is ever set to true for
+      // the automated path — written here with the service role, which is
+      // the one identity the protect_contractor_verification_fields
+      // trigger trusts. The contractor's own browser can never do this
+      // directly, even by tampering with what it sends elsewhere.
+      // Only supply business_name/trade as defaults if this contractor row
+      // doesn't exist yet (verify-license can run before the signup form
+      // is submitted). If it already exists, we must NOT overwrite those
+      // fields — a contractor's real business name might differ slightly
+      // from what they typed for verification, and clobbering it on every
+      // re-verify would be a real regression.
+      const { data: existingRow } = await supabaseAdmin
+        .from("contractors")
+        .select("id")
+        .eq("id", callerId)
+        .maybeSingle();
+
+      const writePayload: Record<string, unknown> = {
+        id: callerId,
+        license_number: licenseNumber,
+        license_type: licenseType,
+        license_verified: true,
+        review_status: "approved",
+        reviewed_at: new Date().toISOString(),
+        review_notes: `Auto-verified via NYC DOB License Info (license #${licenseNumber}, ${licenseType}).`,
+      };
+      if (!existingRow) {
+        writePayload.business_name = submittedName;
+        writePayload.trade =
+          licenseType === "MASTER PLUMBER" ? "Plumbing" :
+          licenseType === "ELECTRICAL CONTRACTOR" ? "Electrical" : "General";
+      }
+
+      const { error: writeError } = await supabaseAdmin
+        .from("contractors")
+        .upsert(writePayload, { onConflict: "id" });
+      if (writeError) {
+        // Verification itself succeeded — don't fail the user-facing
+        // result over a DB write hiccup, but log it loudly since it means
+        // the contractor will see "Verified!" without it actually having
+        // stuck, which needs follow-up.
+        console.error("Failed to persist license_verified=true:", writeError);
+      }
+    }
 
     return new Response(
       JSON.stringify({ verified: true, status, matchedName }),

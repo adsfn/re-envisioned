@@ -1153,8 +1153,9 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
       <div class="verify-box"><h4><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> License verification</h4><p style="font-size:13px;color:#15803d;margin-bottom:12px;">Enter your license number and we'll verify it with state records.</p><div class="verify-row"><select id="cLicenseType" onchange="lastVerifiedLicense=null" style="border:1.5px solid #86efac;border-radius:10px;padding:11px 12px;font-size:14px;background:#f0fdf4;"><option value="MASTER PLUMBER">NY — Plumber</option><option value="ELECTRICAL CONTRACTOR">NY — Electrician</option><option value="GENERAL CONTRACTOR">NY — General Contractor</option></select><input id="cLicense" placeholder="License #" maxlength="30" oninput="onlyAlnumDash(this);lastVerifiedLicense=null" style="border:1.5px solid #86efac;border-radius:10px;padding:11px 12px;font-size:14px;flex:1;background:#f0fdf4;"><button class="verify-btn" onclick="verifyLicense()">Verify now</button></div><div class="field-error" id="cLicenseErr" style="margin-top:8px;">Please enter a license number to verify.</div></div>
       <div class="form-group" style="margin-top:20px;"><label>Insurance status</label><div class="tags-row"><div class="tag selected" onclick="toggleTag(this)">General liability</div><div class="tag" onclick="toggleTag(this)">Workers comp</div><div class="tag" onclick="toggleTag(this)">Bonded</div></div></div>
       <div class="form-group">
-        <label>Upload certifications / licenses</label>
-        <input type="file" id="certFileInput" accept=".pdf,.jpg,.jpeg,.png" multiple style="display:none" onchange="handleCertFiles(this.files)">
+        <label>Upload a photo of your license (for manual verification)</label>
+        <p style="font-size:12px;color:#667;margin:-6px 0 8px;">Our team reviews this alongside the automated NYC DOB check above. Not shared publicly.</p>
+        <input type="file" id="certFileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="handleCertFiles(this.files)">
         <div class="upload-zone" id="certUploadZone" onclick="document.getElementById('certFileInput').click()" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="event.preventDefault();this.classList.remove('dragover');handleCertFiles(event.dataTransfer.files)">
           <div class="upload-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
           <div style="font-weight:600;">Drag & drop or tap to upload</div>
@@ -1179,6 +1180,15 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
 </div>
 
 <!-- CHAT LIST -->
+<div id="page-admin-review" class="page">
+  <div class="inner-hero"><h1>License Review</h1><p>Pending contractor license verifications</p></div>
+  <div style="padding:32px 40px;max-width:900px;margin:0 auto;">
+    <div id="adminReviewContainer" style="display:flex;flex-direction:column;gap:16px;">
+      <div style="text-align:center;padding:40px 0;color:#94a3b8;">Loading pending reviews...</div>
+    </div>
+  </div>
+</div>
+
 <div id="page-chat-list" class="page">
   <div class="page-content">
     <div class="inner-hero"><h1>Messages</h1><p>Your conversations with local pros</p></div>
@@ -1636,6 +1646,7 @@ function updateNav() {
           <div class="dropdown-item" onclick="showPage('edit-profile')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg> My Profile</div>
           <div class="dropdown-item" onclick="showPage('chat-list')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Messages</div>
           <div class="dropdown-item" onclick="showPage('my-bookings')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg> My Bookings</div>
+          ${currentUser.isAdmin ? `<div class="dropdown-item" onclick="showPage('admin-review')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg> License Review</div>` : ''}
           <div class="dropdown-item danger" onclick="signOut()">Sign out</div>
         </div>
       </div>`;
@@ -1753,7 +1764,8 @@ async function loadCurrentUser() {
     first: profile.first_name,
     last: profile.last_name,
     email: profile.email,
-    role: profile.role
+    role: profile.role,
+    isAdmin: !!profile.is_admin
   };
 }
 
@@ -2055,7 +2067,7 @@ function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
 // anything meaningful anyway.
 const DEEP_LINKABLE_PAGES = ['about', 'how-it-works', 'careers', 'press', 'faq', 'safety', 'privacy', 'terms'];
 
-function showPage(id){const wasAlreadyOnThisPage=document.getElementById('page-'+id)&&document.getElementById('page-'+id).classList.contains('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pg=document.getElementById('page-'+id);if(pg){pg.classList.add('active');window.scrollTo(0,0);}document.getElementById('mainNav').classList.remove('scrolled');if(DEEP_LINKABLE_PAGES.includes(id)){history.replaceState(null,'','#'+id);}else if(window.location.hash){history.replaceState(null,'',window.location.pathname);}if(id==='home'&&!wasAlreadyOnThisPage&&typeof playTypewriterHero==='function')playTypewriterHero(150);if(id==='edit-profile'&&typeof loadProfileForm==='function')loadProfileForm();if(id==='profile'&&typeof loadProfileData==='function')loadProfileData();if(id==='contractor-signup'&&typeof loadExistingPortfolioPhotos==='function')loadExistingPortfolioPhotos();if(id==='chat-list'&&typeof loadChatList==='function')loadChatList();if(id==='contractors'){if(!contractorsLoaded&&typeof loadContractorsFromSupabase==='function')loadContractorsFromSupabase();if(typeof initContractorsMap==='function')setTimeout(initContractorsMap,50);}if(id==='my-bookings'){if(typeof checkContractorStripeStatus==='function')checkContractorStripeStatus();if(typeof loadMyBookings==='function')loadMyBookings();}if(id==='estimate'&&typeof renderEstimateHeader==='function')renderEstimateHeader();}
+function showPage(id){const wasAlreadyOnThisPage=document.getElementById('page-'+id)&&document.getElementById('page-'+id).classList.contains('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pg=document.getElementById('page-'+id);if(pg){pg.classList.add('active');window.scrollTo(0,0);}document.getElementById('mainNav').classList.remove('scrolled');if(DEEP_LINKABLE_PAGES.includes(id)){history.replaceState(null,'','#'+id);}else if(window.location.hash){history.replaceState(null,'',window.location.pathname);}if(id==='home'&&!wasAlreadyOnThisPage&&typeof playTypewriterHero==='function')playTypewriterHero(150);if(id==='edit-profile'&&typeof loadProfileForm==='function')loadProfileForm();if(id==='profile'&&typeof loadProfileData==='function')loadProfileData();if(id==='contractor-signup'&&typeof loadExistingPortfolioPhotos==='function')loadExistingPortfolioPhotos();if(id==='chat-list'&&typeof loadChatList==='function')loadChatList();if(id==='admin-review'&&typeof loadAdminReviewList==='function')loadAdminReviewList();if(id==='contractors'){if(!contractorsLoaded&&typeof loadContractorsFromSupabase==='function')loadContractorsFromSupabase();if(typeof initContractorsMap==='function')setTimeout(initContractorsMap,50);}if(id==='my-bookings'){if(typeof checkContractorStripeStatus==='function')checkContractorStripeStatus();if(typeof loadMyBookings==='function')loadMyBookings();}if(id==='estimate'&&typeof renderEstimateHeader==='function')renderEstimateHeader();}
 
 // Pulls the selected contractor's real info into the profile page header/stats
 async function loadProfileData(){
@@ -2218,6 +2230,69 @@ async function loadChatList(){
       </div>
     `;
   }).join('');
+}
+
+// Admin-only: loads contractors with a license photo awaiting manual
+// review. Calls the admin-review-license Edge Function, which checks
+// profiles.is_admin server-side before returning anything — this is a
+// UI convenience, not the actual security boundary (that's enforced in
+// the function and the DB trigger).
+async function loadAdminReviewList(){
+  const container = document.getElementById('adminReviewContainer');
+  if (!container) return;
+
+  const { data, error } = await supabaseClient.functions.invoke('admin-review-license', {
+    body: { action: 'list' }
+  });
+
+  if (error) {
+    container.innerHTML = `<div style="text-align:center;padding:40px 0;color:#dc2626;">Couldn't load reviews: ${escapeHtml(error.message)}</div>`;
+    return;
+  }
+
+  const pending = data?.pending || [];
+  if (pending.length === 0) {
+    container.innerHTML = `<div style="text-align:center;padding:40px 0;color:#94a3b8;">No licenses waiting on review.</div>`;
+    return;
+  }
+
+  container.innerHTML = pending.map(c => {
+    const name = `${c.profiles?.first_name || ''} ${c.profiles?.last_name || ''}`.trim() || 'Unknown';
+    return `
+      <div class="convo-card" style="cursor:default;align-items:flex-start;flex-direction:column;gap:12px;" data-contractor-id="${c.id}">
+        <div style="display:flex;justify-content:space-between;width:100%;gap:12px;">
+          <div>
+            <div style="font-weight:700;font-size:15px;">${escapeHtml(c.business_name || name)}</div>
+            <div style="font-size:13px;color:#667;margin-top:2px;">${escapeHtml(name)} · ${escapeHtml(c.profiles?.email || '')}</div>
+            <div style="font-size:13px;color:#667;margin-top:4px;">${escapeHtml(c.trade || '')} · License #${escapeHtml(c.license_number || 'n/a')} (${escapeHtml(c.license_type || 'n/a')})</div>
+          </div>
+          ${c.photoUrl ? `<a href="${c.photoUrl}" target="_blank" rel="noopener" class="btn-outline-lg" style="padding:8px 16px;font-size:13px;white-space:nowrap;">View photo</a>` : `<span style="font-size:13px;color:#94a3b8;">No photo uploaded</span>`}
+        </div>
+        <div style="display:flex;gap:10px;width:100%;">
+          <button class="verify-btn" style="background:#16a34a;" onclick="decideReview('${c.id}', true, this)">Approve</button>
+          <button class="verify-btn" style="background:#dc2626;" onclick="decideReview('${c.id}', false, this)">Reject</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function decideReview(contractorId, approve, btnEl){
+  const card = btnEl.closest('[data-contractor-id]');
+  card.querySelectorAll('button').forEach(b => b.disabled = true);
+
+  const { error } = await supabaseClient.functions.invoke('admin-review-license', {
+    body: { action: 'decide', contractorId, approve }
+  });
+
+  if (error) {
+    showToast(`Failed to save decision: ${error.message}`, 'error');
+    card.querySelectorAll('button').forEach(b => b.disabled = false);
+    return;
+  }
+
+  showToast(approve ? 'Contractor approved' : 'Contractor rejected', 'success');
+  card.remove();
 }
 
 async function loadChatMessages(){
@@ -2489,9 +2564,15 @@ function stripDangerousChars(el){ el.value = el.value.replace(/[<>`{}]/g, ''); }
 function locationChars(el){ el.value = el.value.replace(/[^A-Za-z0-9À-ÿ\s,.-]/g, ''); }
 function onlyZipChars(el){ el.value = el.value.replace(/[^0-9]/g, ''); }
 
-// CERTIFICATION FILE UPLOAD
+// LICENSE DOCUMENT UPLOAD (for manual admin review)
+// Uploads to the PRIVATE 'license-documents' bucket — unlike avatars/
+// portfolios, contractors can't read this back themselves after upload;
+// only the admin-review-license Edge Function (using the service role
+// key) can generate a signed URL to view it. Only one file is kept since
+// the review flow expects a single photo of the physical license.
 let certFiles = [];
 let certUid = 0;
+let licensePhotoStoragePath = null; // set once the current file finishes uploading
 const ALLOWED_CERT_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
@@ -2507,59 +2588,63 @@ function formatFileSize(bytes){
   return (bytes/(1024*1024)).toFixed(1) + ' MB';
 }
 
-// Simulates an upload progress bar filling from 0-100%, then calls onDone
-function simulateUpload(getBarEl, onDone){
-  let pct = 0;
-  const tick = () => {
-    const bar = getBarEl();
-    if (!bar) return; // element was removed (user cancelled) — stop
-    pct += 8 + Math.random() * 14;
-    if (pct >= 100) {
-      bar.style.width = '100%';
-      setTimeout(onDone, 150);
-      return;
-    }
-    bar.style.width = pct + '%';
-    setTimeout(tick, 110);
-  };
-  setTimeout(tick, 60);
+function handleCertFiles(fileList){
+  if (!currentUser) { showToast('Please sign in first', 'error'); return; }
+  const incoming = Array.from(fileList || []);
+  if (incoming.length === 0) return;
+  const file = incoming[0]; // one license document at a time
+  const isAllowed = ALLOWED_CERT_TYPES.includes(file.type) || /\.(pdf|jpe?g|png)$/i.test(file.name);
+  if (!isAllowed) {
+    showToast('Only PDF, JPG, PNG allowed', 'error');
+    document.getElementById('certFileInput').value = '';
+    return;
+  }
+
+  // Replace whatever was there before — this field holds one document.
+  const isImage = ALLOWED_IMAGE_TYPES.includes(file.type) || /\.(jpe?g|png)$/i.test(file.name);
+  certFiles = [{
+    uid: ++certUid,
+    name: file.name,
+    size: file.size,
+    url: isImage ? URL.createObjectURL(file) : null,
+    isImage,
+    uploading: true
+  }];
+  licensePhotoStoragePath = null;
+  renderCertFiles();
+  uploadLicenseDocument(file, certFiles[0].uid);
+  document.getElementById('certFileInput').value = '';
 }
 
-function handleCertFiles(fileList){
-  const incoming = Array.from(fileList || []);
-  let rejected = 0;
-  incoming.forEach(file => {
-    const isAllowed = ALLOWED_CERT_TYPES.includes(file.type) || /\.(pdf|jpe?g|png)$/i.test(file.name);
-    if (!isAllowed) { rejected++; return; }
-    if (certFiles.some(f => f.name === file.name && f.size === file.size)) return;
-    const isImage = ALLOWED_IMAGE_TYPES.includes(file.type) || /\.(jpe?g|png)$/i.test(file.name);
-    const entry = {
-      uid: ++certUid,
-      name: file.name,
-      size: file.size,
-      url: isImage ? URL.createObjectURL(file) : null,
-      isImage,
-      uploading: true
-    };
-    certFiles.push(entry);
-  });
-  if (rejected > 0) showToast(`${rejected} file${rejected>1?'s':''} skipped — only PDF, JPG, PNG allowed`, 'error');
+async function uploadLicenseDocument(file, uid){
+  const ext = (file.name.split('.').pop() || 'pdf').toLowerCase();
+  const path = `${currentUser.id}/license-${Date.now()}.${ext}`;
+
+  const { error: uploadError } = await supabaseClient.storage
+    .from('license-documents')
+    .upload(path, file, { cacheControl: '3600', contentType: file.type });
+
+  const entry = certFiles.find(f => f.uid === uid);
+  if (!entry) return; // removed while uploading
+
+  if (uploadError) {
+    showToast(uploadError.message, 'error');
+    certFiles = certFiles.filter(f => f.uid !== uid);
+    if (entry.url) URL.revokeObjectURL(entry.url);
+    renderCertFiles();
+    return;
+  }
+
+  licensePhotoStoragePath = path;
+  entry.uploading = false;
   renderCertFiles();
-  certFiles.filter(f => f.uploading).forEach(entry => {
-    simulateUpload(
-      () => document.querySelector(`.file-chip[data-uid="${entry.uid}"] .upload-progress-bar`),
-      () => {
-        entry.uploading = false;
-        renderCertFiles();
-      }
-    );
-  });
-  document.getElementById('certFileInput').value = '';
+  showToast('License document uploaded — it will be reviewed by our team.', 'success');
 }
 
 function removeCertFile(index){
   const [removed] = certFiles.splice(index, 1);
   if (removed && removed.url) URL.revokeObjectURL(removed.url);
+  licensePhotoStoragePath = null;
   renderCertFiles();
 }
 
@@ -2798,7 +2883,11 @@ async function submitContractorForm(){
   const trade = selectedTrades.find(t => !['Yes, 24/7','Weekdays only','No','General liability','Workers comp','Bonded'].includes(t)) || 'General';
   const license = document.getElementById('cLicense')?.value.trim() || null;
   const licenseType = document.getElementById('cLicenseType')?.value || null;
-  const isVerified = !!(lastVerifiedLicense && lastVerifiedLicense.number === license && lastVerifiedLicense.type === licenseType);
+  // license_verified / license_verified_at / review_status are intentionally
+  // NOT set here — a database trigger blocks any client-supplied value for
+  // those columns. They can only be set by the verify-license Edge Function
+  // (automated NYC DOB match) or by an admin approving the uploaded photo
+  // via admin-review-license. See revise_migration_section9_license_manual_review.sql.
 
   const btn = document.getElementById('contractorSubmitBtn');
   btn.disabled = true; btn.textContent = 'Submitting...';
@@ -2814,8 +2903,7 @@ async function submitContractorForm(){
     years_experience: years,
     license_number: license,
     license_type: licenseType,
-    license_verified: isVerified,
-    license_verified_at: isVerified ? new Date().toISOString() : null,
+    license_photo_path: licensePhotoStoragePath,
     lat: geo ? geo.lat : null,
     lng: geo ? geo.lng : null,
     portfolio_urls: portfolioPhotos.filter(p => !p.uploading && p.publicUrl).map(p => p.publicUrl)
