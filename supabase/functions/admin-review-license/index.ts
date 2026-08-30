@@ -17,9 +17,19 @@
 //     the protect_contractor_verification_fields trigger blocks every
 //     other caller from touching those columns directly.
 //
-// Requires "Enforce JWT Verification" ON — this identifies the caller
-// from their own session token and checks their admin flag before doing
-// anything.
+// Requires "Enforce JWT Verification" / "Verify JWT with legacy secret"
+// OFF — this function does its own caller-identity check in code (see
+// requireAdmin below), which is the recommended pattern per Supabase's
+// own guidance for functions with custom auth logic.
+//
+// CORS: browsers send a preflight OPTIONS request before the real POST
+// whenever a cross-origin call includes a JSON body and custom headers
+// (which supabase-js's functions.invoke() always does). Edge Functions do
+// NOT get CORS headers automatically — every response, including the
+// preflight response, must include them explicitly, or the browser blocks
+// the request before it ever reaches this code (which shows up as a
+// generic "Failed to send a request" error on the client, with nothing
+// in this function's own logs, since the request never actually arrives).
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -31,15 +41,32 @@ const supabaseAdmin = createClient(
 
 const SIGNED_URL_EXPIRY_SECONDS = 300; // 5 minutes — plenty for one review pass
 
+// Applied to every response this function returns, success or error.
+// "*" is fine here since this endpoint requires a valid Supabase session
+// token regardless of origin — the real access control is the JWT +
+// is_admin check inside requireAdmin(), not the browser's origin check.
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 async function requireAdmin(req: Request): Promise<{ id: string } | Response> {
   const authHeader = req.headers.get("Authorization") || "";
   const jwt = authHeader.replace(/^Bearer\s+/i, "");
   if (!jwt) {
-    return new Response(JSON.stringify({ error: "Missing auth token" }), { status: 401 });
+    return jsonResponse({ error: "Missing auth token" }, 401);
   }
   const { data: userData, error: authError } = await supabaseAdmin.auth.getUser(jwt);
   if (authError || !userData?.user) {
-    return new Response(JSON.stringify({ error: "Invalid or expired session" }), { status: 401 });
+    return jsonResponse({ error: "Invalid or expired session" }, 401);
   }
 
   const { data: profile, error: profileError } = await supabaseAdmin
@@ -49,15 +76,21 @@ async function requireAdmin(req: Request): Promise<{ id: string } | Response> {
     .single();
 
   if (profileError || !profile?.is_admin) {
-    return new Response(JSON.stringify({ error: "Forbidden — admin access required" }), { status: 403 });
+    return jsonResponse({ error: "Forbidden — admin access required" }, 403);
   }
 
   return { id: userData.user.id };
 }
 
 Deno.serve(async (req) => {
+  // Browsers send this automatically before the real request; it must
+  // succeed with the right headers or the actual POST never gets sent.
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
+    return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
   const adminCheck = await requireAdmin(req);
@@ -67,7 +100,7 @@ Deno.serve(async (req) => {
   try {
     body = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400 });
+    return jsonResponse({ error: "Invalid JSON body" }, 400);
   }
 
   if (body.action === "list") {
@@ -83,7 +116,7 @@ Deno.serve(async (req) => {
 
     if (error) {
       console.error("Failed to list pending reviews:", error);
-      return new Response(JSON.stringify({ error: "Failed to load pending reviews" }), { status: 500 });
+      return jsonResponse({ error: "Failed to load pending reviews" }, 500);
     }
 
     const withUrls = await Promise.all(
@@ -103,15 +136,12 @@ Deno.serve(async (req) => {
       })
     );
 
-    return new Response(JSON.stringify({ pending: withUrls }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonResponse({ pending: withUrls });
   }
 
   if (body.action === "decide") {
     if (!body.contractorId || typeof body.approve !== "boolean") {
-      return new Response(JSON.stringify({ error: "contractorId and approve are required" }), { status: 400 });
+      return jsonResponse({ error: "contractorId and approve are required" }, 400);
     }
 
     const { error } = await supabaseAdmin
@@ -126,14 +156,11 @@ Deno.serve(async (req) => {
 
     if (error) {
       console.error("Failed to record review decision:", error);
-      return new Response(JSON.stringify({ error: "Failed to save decision" }), { status: 500 });
+      return jsonResponse({ error: "Failed to save decision" }, 500);
     }
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonResponse({ success: true });
   }
 
-  return new Response(JSON.stringify({ error: "Unknown action" }), { status: 400 });
+  return jsonResponse({ error: "Unknown action" }, 400);
 });

@@ -563,6 +563,19 @@ nav.scrolled .btn-nav-outline:hover { background: #1558a8; color: #fff; }
 .btn-outline-lg:hover { background: #1558a8; color: #fff; }
 
 .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: #1a2535; color: #fff; padding: 12px 24px; border-radius: 30px; font-size: 14px; font-weight: 600; z-index: 9999; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,.2); display: flex; align-items: center; gap: 10px; }
+
+/* Full-page redirect overlay — shown the instant a button that navigates to
+   an external site (Stripe onboarding, Stripe Checkout) is clicked. Covers
+   both the server round-trip AND the external page's own load time, since
+   it's the last thing rendered before the browser swaps documents — without
+   this there's a gap where the page looks frozen/broken while nothing on
+   screen indicates anything is happening. */
+.redirect-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.92); backdrop-filter: blur(4px); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.redirect-overlay.visible { opacity: 1; pointer-events: all; }
+.redirect-spinner { width: 44px; height: 44px; border: 4px solid rgba(255,255,255,.2); border-top-color: #fff; border-radius: 50%; animation: redirectSpin .8s linear infinite; }
+@keyframes redirectSpin { to { transform: rotate(360deg); } }
+.redirect-overlay-text { color: #fff; font-size: 15px; font-weight: 600; text-align: center; max-width: 320px; padding: 0 20px; }
+.redirect-overlay-sub { color: #94a3b8; font-size: 13px; text-align: center; margin-top: -8px; }
 .toast-icon { display: flex; color: #4ade80; flex-shrink: 0; font-size: 18px; }
 .toast.show { opacity: 1; }
 .hidden { display: none !important; }
@@ -696,11 +709,11 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
           <div class="hero-stat"><div class="num">18k+</div><div class="lbl">Jobs Done</div></div>
         </div>
       </div>
-      <!-- Floating cards -->
+      <!-- Floating cards — populated with real data by loadHeroFloatCards() -->
       <div class="hero-cards">
-        <div class="float-card"><div class="fc-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M12 2v9.5"/><path d="M5 14.5a7 6 0 0 1 14 0"/><path d="M3.5 14.5h17"/><path d="M6.5 14.5c0 2.2 1.3 4 3 5"/><path d="M17.5 14.5c0 2.2-1.3 4-3 5"/></svg></div><div class="fc-label">Available Now</div><div class="fc-val">Mike's Plumbing</div><div class="fc-sub"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg> 0.8 mi away · <svg class="ic star-ic" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.8 21.1 7 14.2 2 9.3l6.9-1z"/></svg>4.9</div></div>
-        <div class="float-card"><div class="fc-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg></div><div class="fc-label">Emergency</div><div class="fc-val">PowerUp Electric</div><div class="fc-sub">ETA ~20 min · 24/7</div></div>
-        <div class="float-card"><div class="fc-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></div><div class="fc-label">Just Completed</div><div class="fc-val">Pipe repair — $218</div><div class="fc-sub">No hidden fees</div></div>
+        <div class="float-card" id="heroCard1"><div class="fc-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg></div><div class="fc-label">Recently Verified</div><div class="fc-val" id="heroCard1Val">A local pro</div><div class="fc-sub" id="heroCard1Sub">NYC DOB license confirmed</div></div>
+        <div class="float-card"><div class="fc-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg></div><div class="fc-label">Urgent Requests</div><div class="fc-val">Priority routing</div><div class="fc-sub">Available around the clock</div></div>
+        <div class="float-card" id="heroCard3"><div class="fc-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></div><div class="fc-label" id="heroCard3Label">0% Platform Fee</div><div class="fc-val" id="heroCard3Val">Pros keep 100%</div><div class="fc-sub">No hidden fees</div></div>
       </div>
     </div>
 
@@ -1602,6 +1615,11 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="redirect-overlay" id="redirectOverlay">
+  <div class="redirect-spinner"></div>
+  <div class="redirect-overlay-text" id="redirectOverlayText">Redirecting you to Stripe's secure page…</div>
+  <div class="redirect-overlay-sub">This can take a few seconds</div>
+</div>
 
 <script>
 let currentUser = null, pendingRedirect = null, selectedRole = 'homeowner';
@@ -1801,6 +1819,23 @@ async function checkContractorStripeStatus() {
   banner.classList.toggle('hidden', !!data.stripe_onboarding_complete);
 }
 
+// Shows the full-page redirect overlay. Deliberately has no matching
+// "hide on success" call at the call sites below — once window.location.href
+// is set, the browser is already navigating away, so the overlay staying
+// visible is exactly the point (it's what covers the external page's own
+// load time). It's only ever hidden again on the error/failure path, where
+// we're staying on this page after all.
+function showRedirectOverlay(text){
+  const overlay = document.getElementById('redirectOverlay');
+  const textEl = document.getElementById('redirectOverlayText');
+  if (textEl && text) textEl.textContent = text;
+  if (overlay) overlay.classList.add('visible');
+}
+function hideRedirectOverlay(){
+  const overlay = document.getElementById('redirectOverlay');
+  if (overlay) overlay.classList.remove('visible');
+}
+
 // Calls the create-connect-account Edge Function and redirects the
 // contractor to Stripe's hosted onboarding page.
 async function connectStripeAccount() {
@@ -1809,6 +1844,7 @@ async function connectStripeAccount() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) { showToast('Please sign in again.', 'error'); return; }
   if (btn) { btn.disabled = true; btn.textContent = 'Connecting…'; }
+  showRedirectOverlay("Setting up your Stripe account…");
   try {
     const res = await fetch(`${EDGE_FUNCTIONS_URL}/create-connect-account`, {
       method: 'POST',
@@ -1816,8 +1852,10 @@ async function connectStripeAccount() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Something went wrong');
+    showRedirectOverlay("Redirecting you to Stripe's secure onboarding…");
     window.location.href = data.url;
   } catch (e) {
+    hideRedirectOverlay();
     showToast(e.message, 'error');
     if (btn) { btn.disabled = false; btn.textContent = 'Connect your bank'; }
   }
@@ -1979,7 +2017,7 @@ function renderBookingCard(b, isContractor, contractor) {
     }
   } else {
     if (b.status === 'completed' && b.payment_status === 'unpaid') {
-      actions.push(`<button class="btn-card primary" style="width:auto;padding:8px 16px;" onclick="payForBooking('${b.id}')">Pay $${Number(b.price_amount || 0).toFixed(2)} now</button>`);
+      actions.push(`<button class="btn-card primary" style="width:auto;padding:8px 16px;" onclick="payForBooking('${b.id}', this)">Pay $${Number(b.price_amount || 0).toFixed(2)} now</button>`);
     }
     if (b.status === 'completed' && b.payment_status === 'paid') {
       actions.push(`<button class="btn-card secondary" style="width:auto;padding:8px 16px;" onclick="showPage('profile')">Leave a review</button>`);
@@ -2040,10 +2078,13 @@ async function cancelBooking(bookingId, btn) {
 
 // Homeowner action: calls the create-checkout-session Edge Function and
 // redirects to Stripe's hosted checkout page for this specific job.
-async function payForBooking(bookingId) {
+async function payForBooking(bookingId, btnEl) {
   if (rateLimited('payForBooking', 3000)) return;
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) { showToast('Please sign in again.', 'error'); return; }
+  const originalText = btnEl ? btnEl.textContent : null;
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Preparing checkout…'; }
+  showRedirectOverlay("Preparing your checkout…");
   try {
     const res = await fetch(`${EDGE_FUNCTIONS_URL}/create-checkout-session`, {
       method: 'POST',
@@ -2052,9 +2093,12 @@ async function payForBooking(bookingId) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Something went wrong');
+    showRedirectOverlay("Redirecting you to Stripe's secure checkout…");
     window.location.href = data.url;
   } catch (e) {
+    hideRedirectOverlay();
     showToast(e.message, 'error');
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = originalText; }
   }
 }
 function requireAuth(page,action){if(currentUser){if(page==='chat')openChatWithContractor();else if(page)showPage(page);else if(action==='review')showToast('Review submitted! Thanks.');else if(action==='contractor')showToast('Profile submitted! You\'ll be live within 24hrs.');}else{pendingRedirect=page;openAuth('signin');}}
@@ -2067,7 +2111,7 @@ function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
 // anything meaningful anyway.
 const DEEP_LINKABLE_PAGES = ['about', 'how-it-works', 'careers', 'press', 'faq', 'safety', 'privacy', 'terms'];
 
-function showPage(id){const wasAlreadyOnThisPage=document.getElementById('page-'+id)&&document.getElementById('page-'+id).classList.contains('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pg=document.getElementById('page-'+id);if(pg){pg.classList.add('active');window.scrollTo(0,0);}document.getElementById('mainNav').classList.remove('scrolled');if(DEEP_LINKABLE_PAGES.includes(id)){history.replaceState(null,'','#'+id);}else if(window.location.hash){history.replaceState(null,'',window.location.pathname);}if(id==='home'&&!wasAlreadyOnThisPage&&typeof playTypewriterHero==='function')playTypewriterHero(150);if(id==='edit-profile'&&typeof loadProfileForm==='function')loadProfileForm();if(id==='profile'&&typeof loadProfileData==='function')loadProfileData();if(id==='contractor-signup'&&typeof loadExistingPortfolioPhotos==='function')loadExistingPortfolioPhotos();if(id==='chat-list'&&typeof loadChatList==='function')loadChatList();if(id==='admin-review'&&typeof loadAdminReviewList==='function')loadAdminReviewList();if(id==='contractors'){if(!contractorsLoaded&&typeof loadContractorsFromSupabase==='function')loadContractorsFromSupabase();if(typeof initContractorsMap==='function')setTimeout(initContractorsMap,50);}if(id==='my-bookings'){if(typeof checkContractorStripeStatus==='function')checkContractorStripeStatus();if(typeof loadMyBookings==='function')loadMyBookings();}if(id==='estimate'&&typeof renderEstimateHeader==='function')renderEstimateHeader();}
+function showPage(id){const wasAlreadyOnThisPage=document.getElementById('page-'+id)&&document.getElementById('page-'+id).classList.contains('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pg=document.getElementById('page-'+id);if(pg){pg.classList.add('active');window.scrollTo(0,0);}document.getElementById('mainNav').classList.remove('scrolled');if(DEEP_LINKABLE_PAGES.includes(id)){history.replaceState(null,'','#'+id);}else if(window.location.hash){history.replaceState(null,'',window.location.pathname);}if(id==='home'&&!wasAlreadyOnThisPage&&typeof playTypewriterHero==='function')playTypewriterHero(150);if(id==='home'&&typeof loadHeroFloatCards==='function')loadHeroFloatCards();if(id==='edit-profile'&&typeof loadProfileForm==='function')loadProfileForm();if(id==='profile'&&typeof loadProfileData==='function')loadProfileData();if(id==='contractor-signup'&&typeof loadExistingPortfolioPhotos==='function')loadExistingPortfolioPhotos();if(id==='chat-list'&&typeof loadChatList==='function')loadChatList();if(id==='admin-review'&&typeof loadAdminReviewList==='function')loadAdminReviewList();if(id==='contractors'){if(!contractorsLoaded&&typeof loadContractorsFromSupabase==='function')loadContractorsFromSupabase();if(typeof initContractorsMap==='function')setTimeout(initContractorsMap,50);}if(id==='my-bookings'){if(typeof checkContractorStripeStatus==='function')checkContractorStripeStatus();if(typeof loadMyBookings==='function')loadMyBookings();}if(id==='estimate'&&typeof renderEstimateHeader==='function')renderEstimateHeader();}
 
 // Pulls the selected contractor's real info into the profile page header/stats
 async function loadProfileData(){
@@ -3339,6 +3383,58 @@ function playTypewriterHero(startDelay) {
   setTimeout(step, startDelay || 0);
 }
 playTypewriterHero(900);
+
+// HERO FLOAT CARDS — replaces old hardcoded fake businesses ("Mike's
+// Plumbing", "PowerUp Electric") with real data where it exists.
+// Card 1: a real, recently license-verified contractor (falls back to
+//   generic copy if none exist yet).
+// Card 3: a real completed & paid job's trade + price, if one exists yet
+//   (falls back to the 0%-fee value prop otherwise — there's no fake
+//   number substituted in either case).
+// The middle "Urgent Requests" card stays static and honest on purpose:
+// there's no live availability/ETA tracking system in the app, so rather
+// than invent a fake ETA tied to a fake business, it just states the real
+// policy (urgent requests get priority routing) without fabricating specifics.
+async function loadHeroFloatCards(){
+  try {
+    const { data: contractorRows } = await supabaseClient
+      .from('contractors')
+      .select('business_name, trade')
+      .eq('license_verified', true)
+      .limit(1);
+    const contractor = contractorRows && contractorRows[0];
+    if (contractor) {
+      const valEl = document.getElementById('heroCard1Val');
+      const subEl = document.getElementById('heroCard1Sub');
+      if (valEl) valEl.textContent = contractor.business_name || 'A local pro';
+      if (subEl) subEl.textContent = contractor.trade ? `${contractor.trade} · NYC DOB verified` : 'NYC DOB license confirmed';
+    }
+  } catch (err) {
+    // Non-critical decoration — leave the honest generic fallback in place.
+    console.error('loadHeroFloatCards: contractor lookup failed', err);
+  }
+
+  try {
+    const { data: bookingRows } = await supabaseClient
+      .from('bookings')
+      .select('price_amount, contractor:contractor_id ( trade )')
+      .eq('payment_status', 'paid')
+      .order('completed_at', { ascending: false })
+      .limit(1);
+    const booking = bookingRows && bookingRows[0];
+    if (booking && booking.price_amount) {
+      const labelEl = document.getElementById('heroCard3Label');
+      const valEl = document.getElementById('heroCard3Val');
+      if (labelEl) labelEl.textContent = 'Just Completed';
+      if (valEl) valEl.textContent = `${booking.contractor?.trade || 'Job'} — $${Number(booking.price_amount).toFixed(0)}`;
+    }
+    // If no paid bookings exist yet, the "0% Platform Fee" fallback
+    // already in the HTML stays as-is — still true, still honest.
+  } catch (err) {
+    console.error('loadHeroFloatCards: booking lookup failed', err);
+  }
+}
+loadHeroFloatCards();
 
 // FAQ ACCORDION + SEARCH/FILTER
 function toggleFaq(q){
