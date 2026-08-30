@@ -2045,7 +2045,15 @@ async function payForBooking(bookingId) {
 }
 function requireAuth(page,action){if(currentUser){if(page==='chat')openChatWithContractor();else if(page)showPage(page);else if(action==='review')showToast('Review submitted! Thanks.');else if(action==='contractor')showToast('Profile submitted! You\'ll be live within 24hrs.');}else{pendingRedirect=page;openAuth('signin');}}
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
-function showPage(id){const wasAlreadyOnThisPage=document.getElementById('page-'+id)&&document.getElementById('page-'+id).classList.contains('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pg=document.getElementById('page-'+id);if(pg){pg.classList.add('active');window.scrollTo(0,0);}document.getElementById('mainNav').classList.remove('scrolled');if(id==='privacy'||id==='terms'){history.replaceState(null,'','#'+id);}else if(window.location.hash){history.replaceState(null,'',window.location.pathname);}if(id==='home'&&!wasAlreadyOnThisPage&&typeof playTypewriterHero==='function')playTypewriterHero(150);if(id==='edit-profile'&&typeof loadProfileForm==='function')loadProfileForm();if(id==='profile'&&typeof loadProfileData==='function')loadProfileData();if(id==='contractor-signup'&&typeof loadExistingPortfolioPhotos==='function')loadExistingPortfolioPhotos();if(id==='chat-list'&&typeof loadChatList==='function')loadChatList();if(id==='contractors'){if(!contractorsLoaded&&typeof loadContractorsFromSupabase==='function')loadContractorsFromSupabase();if(typeof initContractorsMap==='function')setTimeout(initContractorsMap,50);}if(id==='my-bookings'){if(typeof checkContractorStripeStatus==='function')checkContractorStripeStatus();if(typeof loadMyBookings==='function')loadMyBookings();}if(id==='estimate'&&typeof renderEstimateHeader==='function')renderEstimateHeader();}
+// Pages that get a real URL fragment when visited, so they're bookmarkable
+// and shareable (e.g. linking someone straight to #careers). Kept as one
+// shared list so the writer (showPage) and the on-load reader below always
+// agree on what's deep-linkable — only static/informational pages qualify,
+// since account pages like profile/bookings need a live session to render
+// anything meaningful anyway.
+const DEEP_LINKABLE_PAGES = ['about', 'how-it-works', 'careers', 'press', 'faq', 'safety', 'privacy', 'terms'];
+
+function showPage(id){const wasAlreadyOnThisPage=document.getElementById('page-'+id)&&document.getElementById('page-'+id).classList.contains('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pg=document.getElementById('page-'+id);if(pg){pg.classList.add('active');window.scrollTo(0,0);}document.getElementById('mainNav').classList.remove('scrolled');if(DEEP_LINKABLE_PAGES.includes(id)){history.replaceState(null,'','#'+id);}else if(window.location.hash){history.replaceState(null,'',window.location.pathname);}if(id==='home'&&!wasAlreadyOnThisPage&&typeof playTypewriterHero==='function')playTypewriterHero(150);if(id==='edit-profile'&&typeof loadProfileForm==='function')loadProfileForm();if(id==='profile'&&typeof loadProfileData==='function')loadProfileData();if(id==='contractor-signup'&&typeof loadExistingPortfolioPhotos==='function')loadExistingPortfolioPhotos();if(id==='chat-list'&&typeof loadChatList==='function')loadChatList();if(id==='contractors'){if(!contractorsLoaded&&typeof loadContractorsFromSupabase==='function')loadContractorsFromSupabase();if(typeof initContractorsMap==='function')setTimeout(initContractorsMap,50);}if(id==='my-bookings'){if(typeof checkContractorStripeStatus==='function')checkContractorStripeStatus();if(typeof loadMyBookings==='function')loadMyBookings();}if(id==='estimate'&&typeof renderEstimateHeader==='function')renderEstimateHeader();}
 
 // Pulls the selected contractor's real info into the profile page header/stats
 async function loadProfileData(){
@@ -3269,10 +3277,12 @@ function setHiwTab(pill, tab){
     requestAnimationFrame(observeAll);
   };
 
-  // Deep-link support: visiting the site with #privacy or #terms in the URL
-  // opens that page directly on load, so external links (e.g. Google's OAuth
-  // consent screen policy fields) can point straight at a specific page.
-  const DEEP_LINKABLE_PAGES = ['privacy', 'terms'];
+  // Deep-link support: visiting the site with a hash like #careers or
+  // #privacy opens that page directly on load, so external links (e.g.
+  // Google's OAuth consent screen policy fields, or shared footer links)
+  // can point straight at a specific static page. Uses the same
+  // DEEP_LINKABLE_PAGES list that showPage() writes to the URL, defined
+  // earlier in this file.
   const initialHash = window.location.hash.replace('#', '');
   if (DEEP_LINKABLE_PAGES.includes(initialHash)) {
     window.showPage(initialHash);
