@@ -1789,7 +1789,11 @@ async function loadCurrentUser() {
 
 // On page load, check if there's already a logged-in session (e.g. user refreshed
 // the page, or just landed back here after a Google OAuth redirect).
-supabaseClient.auth.getSession().then(async ({ data: { session } }) => {
+// Exposed as a promise (authReadyPromise) so other startup code — like the
+// deep-link dispatch at the bottom of this file — can wait for this async
+// check to finish before deciding whether the visitor is logged in, instead
+// of racing it.
+window.authReadyPromise = supabaseClient.auth.getSession().then(async ({ data: { session } }) => {
   if (session) {
     await loadCurrentUser();
     updateNav();
@@ -1956,7 +1960,7 @@ async function loadMyBookings() {
   const { data: bookings, error } = await supabaseClient
     .from('bookings')
     .select(`
-      id, title, description, status, scheduled_at, price_amount, payment_status, completed_at,
+      id, title, description, status, scheduled_at, price_amount, payment_status, payment_method, cash_requested_at, completed_at,
       contractor_id,
       homeowner:homeowner_id ( first_name, last_name )
     `)
@@ -2005,7 +2009,10 @@ function renderBookingCard(b, isContractor, contractor) {
 
   let priceHtml, actionsHtml;
   if (b.status === 'completed' && b.price_amount != null) {
-    priceHtml = `<div class="booking-price">$${Number(b.price_amount).toFixed(2)} ${b.payment_status === 'paid' ? 'paid' : 'due'}</div>`;
+    const paidLabel = b.payment_status === 'paid' ? `paid${b.payment_method === 'cash' ? ' (cash)' : ''}`
+      : b.payment_status === 'cash_pending' ? 'cash requested'
+      : 'due';
+    priceHtml = `<div class="booking-price">$${Number(b.price_amount).toFixed(2)} ${paidLabel}</div>`;
   } else {
     priceHtml = `<div class="booking-price">Est. pending</div>`;
   }
@@ -2015,9 +2022,17 @@ function renderBookingCard(b, isContractor, contractor) {
     if (b.status !== 'completed' && b.status !== 'cancelled') {
       actions.push(`<button class="btn-card primary" style="width:auto;padding:8px 16px;" onclick="markBookingComplete('${b.id}')">Mark complete</button>`);
     }
+    if (b.status === 'completed' && b.payment_status === 'cash_pending') {
+      actions.push(`<button class="btn-card primary" style="width:auto;padding:8px 16px;" onclick="confirmCashReceived('${b.id}', this)">Confirm cash received</button>`);
+    }
   } else {
     if (b.status === 'completed' && b.payment_status === 'unpaid') {
       actions.push(`<button class="btn-card primary" style="width:auto;padding:8px 16px;" onclick="payForBooking('${b.id}', this)">Pay $${Number(b.price_amount || 0).toFixed(2)} now</button>`);
+      actions.push(`<button class="btn-card secondary" style="width:auto;padding:8px 16px;" onclick="requestCashPayment('${b.id}', this)">Pay with cash instead</button>`);
+    }
+    if (b.status === 'completed' && b.payment_status === 'cash_pending') {
+      actions.push(`<span style="font-size:13px;color:#94a3b8;align-self:center;">Waiting for contractor to confirm cash payment</span>`);
+      actions.push(`<button class="btn-card secondary" style="width:auto;padding:8px 16px;" onclick="switchBackToCardPayment('${b.id}', this)">Switch back to card</button>`);
     }
     if (b.status === 'completed' && b.payment_status === 'paid') {
       actions.push(`<button class="btn-card secondary" style="width:auto;padding:8px 16px;" onclick="showPage('profile')">Leave a review</button>`);
@@ -2101,6 +2116,74 @@ async function payForBooking(bookingId, btnEl) {
     if (btnEl) { btnEl.disabled = false; btnEl.textContent = originalText; }
   }
 }
+
+// Homeowner action: requests to pay the contractor in cash instead of via
+// Stripe. This doesn't move any money — it just flags the booking so the
+// contractor sees a "Confirm cash received" action once they've actually
+// been paid in person. payment_status is only allowed to become 'paid' from
+// here by the assigned contractor (enforced server-side by the
+// protect_payment_status_transitions trigger), so a homeowner can request
+// cash but can't mark it as paid themselves.
+async function requestCashPayment(bookingId, btnEl) {
+  if (rateLimited('requestCashPayment', 3000)) return;
+  if (!confirm("Request to pay in cash? You'll still need to hand the payment to the contractor directly — this just lets them know to expect it.")) return;
+  const originalText = btnEl ? btnEl.textContent : null;
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Requesting…'; }
+  const { error } = await supabaseClient
+    .from('bookings')
+    .update({ payment_method: 'cash', payment_status: 'cash_pending', cash_requested_at: new Date().toISOString() })
+    .eq('id', bookingId);
+  if (error) {
+    showToast(error.message, 'error');
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = originalText; }
+    return;
+  }
+  showToast('Cash payment requested — the contractor will confirm once paid.', 'success');
+  loadMyBookings();
+}
+
+// Homeowner action: undoes a cash payment request, reverting the booking
+// back to the normal Stripe-payable state. Only meaningful while still
+// cash_pending — once the contractor has confirmed cash received, the
+// booking is already 'paid' and this option no longer shows.
+async function switchBackToCardPayment(bookingId, btnEl) {
+  if (rateLimited('switchBackToCardPayment', 3000)) return;
+  const originalText = btnEl ? btnEl.textContent : null;
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Switching…'; }
+  const { error } = await supabaseClient
+    .from('bookings')
+    .update({ payment_method: 'stripe', payment_status: 'unpaid', cash_requested_at: null })
+    .eq('id', bookingId);
+  if (error) {
+    showToast(error.message, 'error');
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = originalText; }
+    return;
+  }
+  showToast('Switched back to card payment.', 'info');
+  loadMyBookings();
+}
+
+// Contractor action: confirms cash was actually received in person, which
+// is what actually flips payment_status to 'paid'. Blocked server-side for
+// anyone except the assigned contractor on a booking that's genuinely
+// cash_pending, so this can't be used to skip payment on a Stripe booking.
+async function confirmCashReceived(bookingId, btnEl) {
+  if (rateLimited('confirmCashReceived', 3000)) return;
+  if (!confirm("Confirm you've received cash payment for this job? This marks the booking as paid.")) return;
+  const originalText = btnEl ? btnEl.textContent : null;
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Confirming…'; }
+  const { error } = await supabaseClient
+    .from('bookings')
+    .update({ payment_status: 'paid' })
+    .eq('id', bookingId);
+  if (error) {
+    showToast(error.message, 'error');
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = originalText; }
+    return;
+  }
+  showToast('Cash payment confirmed.', 'success');
+  loadMyBookings();
+}
 function requireAuth(page,action){if(currentUser){if(page==='chat')openChatWithContractor();else if(page)showPage(page);else if(action==='review')showToast('Review submitted! Thanks.');else if(action==='contractor')showToast('Profile submitted! You\'ll be live within 24hrs.');}else{pendingRedirect=page;openAuth('signin');}}
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
 // Pages that get a real URL fragment when visited, so they're bookmarkable
@@ -2109,9 +2192,16 @@ function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
 // agree on what's deep-linkable — only static/informational pages qualify,
 // since account pages like profile/bookings need a live session to render
 // anything meaningful anyway.
-const DEEP_LINKABLE_PAGES = ['about', 'how-it-works', 'careers', 'press', 'faq', 'safety', 'privacy', 'terms'];
+const DEEP_LINKABLE_PAGES = ['about', 'how-it-works', 'careers', 'press', 'faq', 'safety', 'privacy', 'terms', 'urgent', 'contractors', 'contractor-signup'];
+// Pages that are deep-linkable but require a logged-in session to view.
+// Kept separate from DEEP_LINKABLE_PAGES because dispatching these on cold
+// load needs to wait for auth to resolve first (see authReadyPromise usage
+// at the bottom of this file) and go through requireAuth() rather than
+// showPage() directly, so a logged-out visitor is sent to sign in instead of
+// briefly seeing the page.
+const AUTH_GATED_DEEP_LINK_PAGES = ['chat-list'];
 
-function showPage(id){const wasAlreadyOnThisPage=document.getElementById('page-'+id)&&document.getElementById('page-'+id).classList.contains('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pg=document.getElementById('page-'+id);if(pg){pg.classList.add('active');window.scrollTo(0,0);}document.getElementById('mainNav').classList.remove('scrolled');if(DEEP_LINKABLE_PAGES.includes(id)){history.replaceState(null,'','#'+id);}else if(window.location.hash){history.replaceState(null,'',window.location.pathname);}if(id==='home'&&!wasAlreadyOnThisPage&&typeof playTypewriterHero==='function')playTypewriterHero(150);if(id==='home'&&typeof loadHeroFloatCards==='function')loadHeroFloatCards();if(id==='edit-profile'&&typeof loadProfileForm==='function')loadProfileForm();if(id==='profile'&&typeof loadProfileData==='function')loadProfileData();if(id==='contractor-signup'&&typeof loadExistingPortfolioPhotos==='function')loadExistingPortfolioPhotos();if(id==='chat-list'&&typeof loadChatList==='function')loadChatList();if(id==='admin-review'&&typeof loadAdminReviewList==='function')loadAdminReviewList();if(id==='contractors'){if(!contractorsLoaded&&typeof loadContractorsFromSupabase==='function')loadContractorsFromSupabase();if(typeof initContractorsMap==='function')setTimeout(initContractorsMap,50);}if(id==='my-bookings'){if(typeof checkContractorStripeStatus==='function')checkContractorStripeStatus();if(typeof loadMyBookings==='function')loadMyBookings();}if(id==='estimate'&&typeof renderEstimateHeader==='function')renderEstimateHeader();}
+function showPage(id){const wasAlreadyOnThisPage=document.getElementById('page-'+id)&&document.getElementById('page-'+id).classList.contains('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pg=document.getElementById('page-'+id);if(pg){pg.classList.add('active');window.scrollTo(0,0);}document.getElementById('mainNav').classList.remove('scrolled');if(DEEP_LINKABLE_PAGES.includes(id)||AUTH_GATED_DEEP_LINK_PAGES.includes(id)){history.replaceState(null,'','#'+id);}else if(window.location.hash){history.replaceState(null,'',window.location.pathname);}if(id==='home'&&!wasAlreadyOnThisPage&&typeof playTypewriterHero==='function')playTypewriterHero(150);if(id==='home'&&typeof loadHeroFloatCards==='function')loadHeroFloatCards();if(id==='edit-profile'&&typeof loadProfileForm==='function')loadProfileForm();if(id==='profile'&&typeof loadProfileData==='function')loadProfileData();if(id==='contractor-signup'&&typeof loadExistingPortfolioPhotos==='function')loadExistingPortfolioPhotos();if(id==='chat-list'&&typeof loadChatList==='function')loadChatList();if(id==='admin-review'&&typeof loadAdminReviewList==='function')loadAdminReviewList();if(id==='contractors'){if(!contractorsLoaded&&typeof loadContractorsFromSupabase==='function')loadContractorsFromSupabase();if(typeof initContractorsMap==='function')setTimeout(initContractorsMap,50);}if(id==='my-bookings'){if(typeof checkContractorStripeStatus==='function')checkContractorStripeStatus();if(typeof loadMyBookings==='function')loadMyBookings();}if(id==='estimate'&&typeof renderEstimateHeader==='function')renderEstimateHeader();}
 
 // Pulls the selected contractor's real info into the profile page header/stats
 async function loadProfileData(){
@@ -3524,6 +3614,16 @@ function setHiwTab(pill, tab){
   const initialHash = window.location.hash.replace('#', '');
   if (DEEP_LINKABLE_PAGES.includes(initialHash)) {
     window.showPage(initialHash);
+  } else if (AUTH_GATED_DEEP_LINK_PAGES.includes(initialHash)) {
+    // Auth-gated deep link (e.g. #chat-list): the session check in
+    // authReadyPromise is async, so calling showPage() here immediately
+    // would render the page before we know if the visitor is really logged
+    // in. Wait for it to resolve, then route through requireAuth() so a
+    // logged-out visitor gets the sign-in modal (with this page queued as
+    // pendingRedirect) instead of a broken authenticated-only view.
+    window.authReadyPromise.then(() => {
+      requireAuth(initialHash);
+    });
   }
 })();
 </script>
