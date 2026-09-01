@@ -756,7 +756,7 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
       <div class="section-header">
         <div class="section-tag">Top Rated</div>
         <div class="section-title">Trusted pros <span>near you</span></div>
-        <div class="section-sub">Hand-picked, verified contractors with real reviews from your neighbors.</div>
+        <div class="section-sub" id="homepageProsSub">Hand-picked, verified contractors with real reviews from your neighbors.</div>
         <a class="view-all" onclick="showPage('contractors')">View all pros <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
       </div>
       <div class="contractors-grid" id="homepagePros">
@@ -1686,6 +1686,7 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
    ============================================================ */
 let currentUser = null, pendingRedirect = null, selectedRole = 'homeowner';
 let userAvatarPhoto = null; // persists across sign-in/out within this session
+let preciseGeoCoords = null; // { lat, lng, place } from the browser's actual location, when in use (search bar "Use my location" and the homepage "near you" list both read/write this). Declared here, not near its other geolocation helpers further down, because loadHomepagePros() reads it immediately on page load and `let` bindings aren't usable before their declaration line runs.
 
 // SMALL RATE LIMITER — prevents an action from firing again within `ms` of its last call
 const _rateLimitTimestamps = {};
@@ -1958,18 +1959,61 @@ async function connectStripeAccount() {
    Real (non-fake) contractor cards for the homepage — top pros
    grid and the hero's floating cards.
    ============================================================ */
+// Homepage "Trusted pros near you" — genuinely location-aware: uses the
+// browser's Geolocation API to find the 4-5 nearest contractors by real
+// distance, rather than just the highest-rated ones site-wide. Falls back
+// to top-rated (previous behavior) if location isn't available/granted, so
+// the section still works for anyone who declines the permission prompt.
 async function loadHomepagePros() {
   const grid = document.getElementById('homepagePros');
+  const sectionSub = document.getElementById('homepageProsSub');
   if (!grid) return;
-  const { data, error } = await supabaseClient
-    .from('contractors')
-    .select(`
-      id, business_name, trade, hourly_rate, years_experience,
-      is_verified, rating, review_count,
-      profiles ( first_name, last_name, avatar_url )
-    `)
-    .order('rating', { ascending: false })
-    .limit(3);
+
+  const coords = await getHomepageLocation();
+
+  let data, error;
+  if (coords) {
+    // Pull a larger candidate pool with real coordinates, sort by actual
+    // distance client-side (same Haversine helper the search map uses),
+    // then keep the nearest 5.
+    const res = await supabaseClient
+      .from('contractors')
+      .select(`
+        id, business_name, trade, hourly_rate, years_experience,
+        is_verified, rating, review_count, lat, lng,
+        profiles ( first_name, last_name, avatar_url )
+      `)
+      .not('lat', 'is', null)
+      .not('lng', 'is', null)
+      .order('rating', { ascending: false })
+      .limit(50);
+    if (!res.error && res.data && res.data.length > 0) {
+      data = res.data
+        .map(c => ({ ...c, _distance: distanceMiles(coords.lat, coords.lng, c.lat, c.lng) }))
+        .sort((a, b) => a._distance - b._distance)
+        .slice(0, 5);
+      if (sectionSub) sectionSub.textContent = 'Hand-picked, verified contractors closest to your current location.';
+    } else {
+      error = res.error;
+    }
+  }
+
+  // No location, or no contractors have coordinates yet — fall back to the
+  // original top-rated-sitewide behavior.
+  if (!data) {
+    const res = await supabaseClient
+      .from('contractors')
+      .select(`
+        id, business_name, trade, hourly_rate, years_experience,
+        is_verified, rating, review_count,
+        profiles ( first_name, last_name, avatar_url )
+      `)
+      .order('rating', { ascending: false })
+      .limit(5);
+    data = res.data;
+    error = res.error;
+    if (sectionSub) sectionSub.textContent = 'Hand-picked, verified contractors with real reviews from your neighbors.';
+  }
 
   if (error || !data || data.length === 0) {
     grid.innerHTML = `<div class="filter-empty" style="grid-column:1/-1;text-align:center;padding:60px 20px;">
@@ -1985,6 +2029,7 @@ async function loadHomepagePros() {
     const rating = Number(c.rating || 0).toFixed(1);
     const price = c.hourly_rate ? `$${Number(c.hourly_rate).toFixed(0)}/hr` : 'Ask for quote';
     const img = c.profiles?.avatar_url || 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=600&q=80';
+    const distanceBadge = c._distance != null ? `<div class="card-meta" style="margin-top:2px;">${c._distance < 0.1 ? 'Less than 0.1' : c._distance.toFixed(1)} mi away</div>` : '';
     const verifiedBadge = c.is_verified
       ? `<span class="badge-verified"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 6 9 17l-5-5"/></svg> Verified</span>`
       : '';
@@ -1994,11 +2039,29 @@ async function loadHomepagePros() {
         <div class="card-name">${escapeHtml(name)}</div>
         <div class="card-trade">${escapeHtml(c.trade || '')}</div>
         <div class="card-meta"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg> ${c.years_experience || 0} yrs experience &nbsp;·&nbsp; ${c.review_count || 0} reviews</div>
+        ${distanceBadge}
         <div class="card-price-row"><div><div class="card-price-label">Estimated price</div><div class="card-price">${price}</div></div></div>
         <div class="card-cta"><button class="btn-card primary" onclick="event.stopPropagation();selectedContractorId='${c.id}';requireAuth('chat')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Chat</button><button class="btn-card secondary" onclick="event.stopPropagation();selectedContractorId='${c.id}';showPage('estimate')">Get estimate</button></div>
       </div>
     </div>`;
   }).join('');
+}
+
+// Best-effort, silent location read for the homepage — unlike "Use my
+// location" in the search bar, this never prompts the user with a toast on
+// failure; it just resolves null and loadHomepagePros() falls back to
+// top-rated. Reuses whatever precise coordinates the search bar may have
+// already captured this session instead of asking twice.
+function getHomepageLocation() {
+  return new Promise((resolve) => {
+    if (preciseGeoCoords) { resolve(preciseGeoCoords); return; }
+    if (!navigator.geolocation) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve(null),
+      { enableHighAccuracy: false, timeout: 6000, maximumAge: 300000 }
+    );
+  });
 }
 loadHomepagePros();
 
@@ -3404,7 +3467,9 @@ async function geocodeZip(zip) {
 // coordinates via the browser's Geolocation API, giving pinpoint accuracy —
 // then reverse-geocodes just far enough to fill the postal code field for
 // display/consistency with the rest of the search UI.
-let preciseGeoCoords = null; // { lat, lng, place } from the browser's actual location, when in use
+// (preciseGeoCoords itself is declared near the top of this script, with
+// the other global state, since loadHomepagePros() reads it immediately on
+// page load — see the comment there for why it couldn't stay down here.)
 
 // Clears precise-location mode the moment the user edits the postal code by
 // hand, so a stale device location can't silently override what they typed.
