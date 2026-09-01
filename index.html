@@ -688,7 +688,11 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
           <div class="search-divider"></div>
           <div class="search-field" style="min-width:120px;">
             <label>Postal Code</label>
-            <input type="text" id="heroSearchZip" placeholder="e.g. 10001" maxlength="5" inputmode="numeric" oninput="onlyZipChars(this)">
+            <input type="text" id="heroSearchZip" placeholder="e.g. 10001" maxlength="5" inputmode="numeric" oninput="onlyZipChars(this);clearGeoPrecision();">
+            <span id="useMyLocationBtn" onclick="useMyLocation(this)" style="font-size:11px;color:#1558a8;font-weight:600;cursor:pointer;margin-top:2px;display:inline-flex;align-items:center;gap:3px;">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" style="width:11px;height:11px;"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+              Use my location
+            </span>
           </div>
           <div class="search-divider"></div>
           <div class="search-field" style="min-width:100px;">
@@ -1675,6 +1679,11 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
 </div>
 
 <script>
+/* ============================================================
+   SECTION: GLOBAL STATE & SMALL UI UTILITIES
+   currentUser, redirect/role state, rate limiting, and generic
+   nav/dropdown helpers used across the whole app.
+   ============================================================ */
 let currentUser = null, pendingRedirect = null, selectedRole = 'homeowner';
 let userAvatarPhoto = null; // persists across sign-in/out within this session
 
@@ -1714,9 +1723,9 @@ function updateNav() {
     nr.innerHTML = `<span class="nav-greeting">Hi, ${currentUser.first}!</span>
       <div class="user-avatar" onclick="toggleDropdown()" id="userAvatar">${avatarInner}
         <div class="user-dropdown" id="userDropdown">
-          <div class="dropdown-item" onclick="showPage('edit-profile')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg> My Profile</div>
-          <div class="dropdown-item" onclick="showPage('chat-list')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Messages</div>
-          <div class="dropdown-item" onclick="showPage('my-bookings')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg> My Bookings</div>
+          <div class="dropdown-item" onclick="requireAuth('edit-profile')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg> My Profile</div>
+          <div class="dropdown-item" onclick="requireAuth('chat-list')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Messages</div>
+          <div class="dropdown-item" onclick="requireAuth('my-bookings')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg> My Bookings</div>
           ${currentUser.isAdmin ? `<div class="dropdown-item" onclick="showPage('admin-review')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg> License Review</div>` : ''}
           <div class="dropdown-item danger" onclick="signOut()">Sign out</div>
         </div>
@@ -1729,6 +1738,11 @@ function updateNav() {
 function toggleDropdown() { const dd=document.getElementById('userDropdown'); if(dd)dd.classList.toggle('open'); }
 document.addEventListener('click', e => { const av=document.getElementById('userAvatar'); if(av&&!av.contains(e.target)){const dd=document.getElementById('userDropdown');if(dd)dd.classList.remove('open');}});
 
+/* ============================================================
+   SECTION: AUTHENTICATION
+   Sign in/up modal, Google OAuth, session bootstrap
+   (authReadyPromise), and sign out.
+   ============================================================ */
 function openAuth(mode) { pendingRedirect=null; document.getElementById('authModal').classList.remove('hidden'); switchAuth(mode); }
 function closeAuth() { document.getElementById('authModal').classList.add('hidden'); clearErrors(); if(pendingRedirect){if(pendingRedirect==='chat')openChatWithContractor();else showPage(pendingRedirect);pendingRedirect=null;} }
 function switchAuth(mode) { document.getElementById('signinForm').classList.toggle('hidden',mode!=='signin'); document.getElementById('signupForm').classList.toggle('hidden',mode!=='signup'); document.getElementById('successView').classList.add('hidden'); clearErrors(); }
@@ -1861,6 +1875,12 @@ window.authReadyPromise = supabaseClient.auth.getSession().then(async ({ data: {
 // as SUPABASE_URL, under the /functions/v1/ path instead of the REST API path.
 const EDGE_FUNCTIONS_URL = SUPABASE_URL + '/functions/v1';
 
+/* ============================================================
+   SECTION: PAYMENTS (Stripe Connect + cash)
+   Contractor Stripe onboarding status/banner, the Stripe
+   Checkout redirect flow, and the cash-payment request/confirm/
+   switch-back flow that runs alongside it.
+   ============================================================ */
 // Shows/hides the "Connect your bank" banner on My Bookings based on whether
 // the logged-in contractor has finished Stripe onboarding yet.
 async function checkContractorStripeStatus() {
@@ -1933,6 +1953,11 @@ async function connectStripeAccount() {
 
 // Loads a few real, top-rated contractors into the homepage's
 // "Trusted pros near you" section — replaces the old hardcoded demo cards.
+/* ============================================================
+   SECTION: HOMEPAGE DATA
+   Real (non-fake) contractor cards for the homepage — top pros
+   grid and the hero's floating cards.
+   ============================================================ */
 async function loadHomepagePros() {
   const grid = document.getElementById('homepagePros');
   if (!grid) return;
@@ -1990,6 +2015,12 @@ function showSuccess(title,msg){
       : '<svg class="ic" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="11" fill="#1558a8"/><path d="M7.5 12.5l2.8 2.8 6.2-6.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   }
 }
+/* ============================================================
+   SECTION: MY BOOKINGS
+   Booking list (homeowner + contractor views), status filters,
+   marking a job complete, and cancellation. Payment actions for
+   a booking live in the PAYMENTS section above.
+   ============================================================ */
 function signOut(){ supabaseClient.auth.signOut().then(()=>{ currentUser=null; updateNav(); showPage('home'); showToast('Signed out successfully.'); }); }
 
 function filterBookings(el, type){
@@ -2237,26 +2268,45 @@ async function confirmCashReceived(bookingId, btnEl) {
   showToast('Cash payment confirmed.', 'success');
   loadMyBookings();
 }
+/* ============================================================
+   SECTION: ROUTING & DEEP LINKING
+   requireAuth() gates navigation behind sign-in; showPage()
+   is the single-page-app router that swaps .page elements and
+   writes shareable URL fragments for DEEP_LINKABLE_PAGES /
+   AUTH_GATED_DEEP_LINK_PAGES. The cold-load dispatcher that
+   reads window.location.hash on startup lives at the bottom of
+   this script, after all functions are defined.
+   ============================================================ */
 function requireAuth(page,action){if(currentUser){if(page==='chat')openChatWithContractor();else if(page)showPage(page);else if(action==='review')showToast('Review submitted! Thanks.');else if(action==='contractor')showToast('Profile submitted! You\'ll be live within 24hrs.');}else{pendingRedirect=page;openAuth('signin');}}
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
 // Pages that get a real URL fragment when visited, so they're bookmarkable
 // and shareable (e.g. linking someone straight to #careers). Kept as one
 // shared list so the writer (showPage) and the on-load reader below always
-// agree on what's deep-linkable — only static/informational pages qualify,
-// since account pages like profile/bookings need a live session to render
-// anything meaningful anyway.
+// agree on what's deep-linkable. This list covers public/static pages only;
+// account pages that need a live session (bookings, profile, messages) are
+// deep-linkable too but go through AUTH_GATED_DEEP_LINK_PAGES just below,
+// since they need special handling on cold load.
 const DEEP_LINKABLE_PAGES = ['about', 'how-it-works', 'careers', 'press', 'faq', 'safety', 'privacy', 'terms', 'accessibility', 'urgent', 'contractors', 'contractor-signup'];
-// Pages that are deep-linkable but require a logged-in session to view.
+// Pages that are deep-linkable but require a logged-in session to view:
+// chat-list (Messages), my-bookings (My Bookings), edit-profile (My Profile).
 // Kept separate from DEEP_LINKABLE_PAGES because dispatching these on cold
 // load needs to wait for auth to resolve first (see authReadyPromise usage
 // at the bottom of this file) and go through requireAuth() rather than
 // showPage() directly, so a logged-out visitor is sent to sign in instead of
 // briefly seeing the page.
-const AUTH_GATED_DEEP_LINK_PAGES = ['chat-list'];
+const AUTH_GATED_DEEP_LINK_PAGES = ['chat-list', 'my-bookings', 'edit-profile'];
 
 function showPage(id){const wasAlreadyOnThisPage=document.getElementById('page-'+id)&&document.getElementById('page-'+id).classList.contains('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pg=document.getElementById('page-'+id);if(pg){pg.classList.add('active');window.scrollTo(0,0);}document.getElementById('mainNav').classList.remove('scrolled');if(DEEP_LINKABLE_PAGES.includes(id)||AUTH_GATED_DEEP_LINK_PAGES.includes(id)){history.replaceState(null,'','#'+id);}else if(window.location.hash){history.replaceState(null,'',window.location.pathname);}if(id==='home'&&!wasAlreadyOnThisPage&&typeof playTypewriterHero==='function')playTypewriterHero(150);if(id==='home'&&typeof loadHeroFloatCards==='function')loadHeroFloatCards();if(id==='edit-profile'&&typeof loadProfileForm==='function')loadProfileForm();if(id==='profile'&&typeof loadProfileData==='function')loadProfileData();if(id==='contractor-signup'&&typeof loadExistingPortfolioPhotos==='function')loadExistingPortfolioPhotos();if(id==='chat-list'&&typeof loadChatList==='function')loadChatList();if(id==='admin-review'&&typeof loadAdminReviewList==='function')loadAdminReviewList();if(id==='contractors'){if(!contractorsLoaded&&typeof loadContractorsFromSupabase==='function')loadContractorsFromSupabase();if(typeof initContractorsMap==='function')setTimeout(initContractorsMap,50);}if(id==='my-bookings'){if(typeof checkContractorStripeStatus==='function')checkContractorStripeStatus();if(typeof loadMyBookings==='function')loadMyBookings();}if(id==='estimate'&&typeof renderEstimateHeader==='function')renderEstimateHeader();}
 
 // Pulls the selected contractor's real info into the profile page header/stats
+/* ============================================================
+   SECTION: CONTRACTOR PROFILE PAGE (public "profile" page)
+   Loads a single contractor's public profile — reviews, chat
+   entry point, etc. Note this is distinct from the user's own
+   account settings, which is the separate "edit-profile" page
+   further down. See renderContractorProfilePage() below for the
+   fuller version of this page's data loading.
+   ============================================================ */
 async function loadProfileData(){
   if (!selectedContractorId) return; // no contractor selected — leave demo content as-is
   const { data: c, error } = await supabaseClient
@@ -2283,6 +2333,12 @@ let currentChatBookingId = null;
 let chatChannel = null;
 
 // Finds an existing thread with this contractor, or creates one to anchor messages to.
+/* ============================================================
+   SECTION: CHAT / MESSAGES
+   Homeowner<->contractor messaging: opening/creating a chat
+   thread, the inbox list, loading + sending messages, and the
+   realtime subscription that keeps a thread live.
+   ============================================================ */
 async function openChatWithContractor(){
   if (!currentUser || !selectedContractorId) { showPage('chat-list'); return; }
 
@@ -2424,6 +2480,12 @@ async function loadChatList(){
 // profiles.is_admin server-side before returning anything — this is a
 // UI convenience, not the actual security boundary (that's enforced in
 // the function and the DB trigger).
+/* ============================================================
+   SECTION: ADMIN — LICENSE PHOTO REVIEW
+   Admin-only page (gated by profiles.is_admin) for the manual
+   second-layer review of contractor license photo uploads,
+   alongside the automated NYC DOB lookup in verifyLicense().
+   ============================================================ */
 async function loadAdminReviewList(){
   const container = document.getElementById('adminReviewContainer');
   if (!container) return;
@@ -2555,6 +2617,12 @@ async function sendMsg(){
   }
 }
 
+/* ============================================================
+   SECTION: MY PROFILE (account settings, "edit-profile" page)
+   The logged-in user's own editable profile: loading/saving
+   form fields and the avatar upload flow. Not to be confused
+   with the public contractor profile page above.
+   ============================================================ */
 function loadProfileForm(){
   const first = currentUser ? currentUser.first : '';
   const last = currentUser ? currentUser.last : '';
@@ -2639,6 +2707,9 @@ const TOAST_ICONS = {
   error: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6"/><path d="M9 9l6 6"/></svg>',
   message: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'
 };
+/* ============================================================
+   SECTION: TOAST NOTIFICATIONS
+   ============================================================ */
 function showToast(msg, type){
   const t=document.getElementById('toast');
   const icon = TOAST_ICONS[type] || TOAST_ICONS.success;
@@ -2647,6 +2718,11 @@ function showToast(msg, type){
   clearTimeout(t._hideTimer);
   t._hideTimer = setTimeout(()=>t.classList.remove('show'),2800);
 }
+/* ============================================================
+   SECTION: CONTRACTOR PROFILE DATA + BOOKING/ESTIMATE ENTRY
+   selectedContractorId is the global that ties the contractor
+   detail page, chat, scheduling, and estimate flows together.
+   ============================================================ */
 let selectedContractorId = null;
 let contractorDetailsCache = {};
 
@@ -2704,6 +2780,11 @@ async function renderEstimateHeader() {
 }
 
 function viewContractorProfile(id){ selectedContractorId = id; showPage('profile'); renderContractorProfilePage(id); }
+/* ============================================================
+   SECTION: SCHEDULING MODAL
+   The "book an appointment" modal — slot selection and creating
+   the actual booking row.
+   ============================================================ */
 function openSchedule(){if(!currentUser){openAuth('signin');return;}document.getElementById('scheduleModal').classList.remove('hidden');}
 function closeSchedule(){document.getElementById('scheduleModal').classList.add('hidden');}
 async function bookAppt(){
@@ -2734,6 +2815,11 @@ async function bookAppt(){
   showToast('Appointment requested! The pro will confirm shortly.', 'success');
 }
 function selectSlot(el){document.querySelectorAll('.slot').forEach(s=>s.classList.remove('sel'));el.classList.add('sel');}
+/* ============================================================
+   SECTION: FORM INPUT HELPERS
+   Generic tag toggles + character-filtering input sanitizers
+   reused across the contractor signup and other forms.
+   ============================================================ */
 function toggleTag(el){el.classList.toggle('selected');}
 function selectSingleTag(el){el.parentElement.querySelectorAll('.tag').forEach(t=>t.classList.remove('selected'));el.classList.add('selected');}
 
@@ -2763,6 +2849,12 @@ let licensePhotoStoragePath = null; // set once the current file finishes upload
 const ALLOWED_CERT_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
+/* ============================================================
+   SECTION: MISC UTILITIES + LICENSE/PORTFOLIO FILE UPLOADS
+   HTML escaping, file-size formatting, and the real Supabase
+   Storage upload flows for license documents (private bucket,
+   feeds the admin review queue) and portfolio photos.
+   ============================================================ */
 function escapeHtml(str){
   const d = document.createElement('div');
   d.textContent = str;
@@ -2962,6 +3054,12 @@ async function loadExistingPortfolioPhotos(){
   renderPortfolioPhotos();
 }
 
+/* ============================================================
+   SECTION: CONTRACTOR SIGNUP — VALIDATION + SUBMISSION
+   Form validation, the real NYC DOB license verification call
+   (verifyLicense — automated first layer, see the ADMIN section
+   above for the manual second layer), and final form submit.
+   ============================================================ */
 function setFieldError(inputId, errId, show){
   const input = document.getElementById(inputId);
   const err = document.getElementById(errId);
@@ -3104,9 +3202,18 @@ async function submitContractorForm(){
   showToast('Profile submitted! You\'ll be live within 24hrs.', 'success');
   showPage('my-bookings');
 }
+/* ============================================================
+   SECTION: ESTIMATE PAGE HELPERS
+   ============================================================ */
 function addPhotoMsg(){ showToast('Photo attachments coming soon!', 'info'); }
 function updateEstimate(sel){const el=document.getElementById('estTotal');if(sel.value.includes('Emergency'))el.textContent='$298';else if(sel.value.includes('Same'))el.textContent='$248';else el.textContent='$218';}
 
+/* ============================================================
+   SECTION: CONTRACTOR SEARCH + MAP
+   Loading/rendering contractor result cards, filters, zip/
+   service-area geocoding (OpenStreetMap Nominatim), Haversine
+   distance sorting, and the Leaflet map + markers.
+   ============================================================ */
 function skeletonCardHTML(){
   return `<div class="skeleton-card">
     <div class="skeleton-img"></div>
@@ -3290,6 +3397,69 @@ async function geocodeZip(zip) {
   }
 }
 
+// GEOLOCATION-BASED SEARCH ACCURACY
+// A typed postal code only geocodes to that zip's centroid, which can be a
+// mile or more off from where someone actually is (zip areas are large and
+// irregular). "Use my location" instead reads the device's real GPS/network
+// coordinates via the browser's Geolocation API, giving pinpoint accuracy —
+// then reverse-geocodes just far enough to fill the postal code field for
+// display/consistency with the rest of the search UI.
+let preciseGeoCoords = null; // { lat, lng, place } from the browser's actual location, when in use
+
+// Clears precise-location mode the moment the user edits the postal code by
+// hand, so a stale device location can't silently override what they typed.
+function clearGeoPrecision() {
+  preciseGeoCoords = null;
+  const btn = document.getElementById('useMyLocationBtn');
+  if (btn) btn.textContent = '';
+  if (btn) btn.innerHTML = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" style="width:11px;height:11px;"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Use my location';
+}
+
+// Reverse-geocodes coordinates to a US postal code via the same Nominatim
+// service used elsewhere in the app, purely to populate the visible zip
+// field — the actual search still uses the precise lat/lng, not this zip.
+async function reverseGeocodeToZip(lat, lng) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&zoom=16`;
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const addr = data.address || {};
+    return {
+      zip: addr.postcode || null,
+      place: [addr.city || addr.town || addr.village || addr.hamlet, addr.state].filter(Boolean).join(', ')
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+async function useMyLocation(btnEl) {
+  if (rateLimited('useMyLocation', 2000)) return;
+  if (!navigator.geolocation) {
+    showToast("Your browser doesn't support location detection — enter a postal code instead.", 'error');
+    return;
+  }
+  const originalHtml = btnEl.innerHTML;
+  btnEl.innerHTML = 'Locating…';
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const { latitude, longitude } = pos.coords;
+    const reverse = await reverseGeocodeToZip(latitude, longitude);
+    preciseGeoCoords = { lat: latitude, lng: longitude, place: (reverse && reverse.place) || 'your location' };
+    const zipInput = document.getElementById('heroSearchZip');
+    if (zipInput && reverse && reverse.zip) zipInput.value = reverse.zip;
+    btnEl.innerHTML = '✓ Using your precise location';
+    showToast('Using your current location for search accuracy.', 'success');
+  }, (err) => {
+    btnEl.innerHTML = originalHtml;
+    if (err.code === err.PERMISSION_DENIED) {
+      showToast('Location access was denied — enter a postal code instead.', 'error');
+    } else {
+      showToast("Couldn't get your location — enter a postal code instead.", 'error');
+    }
+  }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 });
+}
+
 // Best-effort geocode of a contractor's free-typed "service area" field
 // (e.g. "Brooklyn, NY 11201"). Prefers an embedded 5-digit zip if present
 // since that's the most precise; falls back to geocoding the raw text.
@@ -3433,7 +3603,7 @@ async function performSearch(){
   const zipInput = document.getElementById('heroSearchZip');
   const jobVal = jobInput ? jobInput.value.trim() : '';
   const zipVal = zipInput ? zipInput.value.trim() : '';
-  if (!jobVal && !zipVal) {
+  if (!jobVal && !zipVal && !preciseGeoCoords) {
     showToast('Enter what you need or a postal code to search.', 'error');
     if (jobInput) jobInput.focus();
     return;
@@ -3444,13 +3614,25 @@ async function performSearch(){
       if (zipInput) zipInput.focus();
       return;
     }
-    const geo = await geocodeZip(zipVal);
-    if (!geo) {
-      showToast("We couldn't find that postal code — check it and try again.", 'error');
-      if (zipInput) zipInput.focus();
-      return;
+    // Prefer the device's precise coordinates over re-geocoding the zip to
+    // its centroid, as long as the zip field still matches what "Use my
+    // location" filled in (clearGeoPrecision() wipes this the moment the
+    // user edits the field by hand, so this can't go stale silently).
+    if (preciseGeoCoords) {
+      searchedZipCoords = preciseGeoCoords;
+    } else {
+      const geo = await geocodeZip(zipVal);
+      if (!geo) {
+        showToast("We couldn't find that postal code — check it and try again.", 'error');
+        if (zipInput) zipInput.focus();
+        return;
+      }
+      searchedZipCoords = geo;
     }
-    searchedZipCoords = geo;
+  } else if (preciseGeoCoords) {
+    // Reverse geocoding didn't resolve a postal code to display, but we
+    // still have precise device coordinates to search with directly.
+    searchedZipCoords = preciseGeoCoords;
   } else {
     searchedZipCoords = null;
   }
@@ -3481,6 +3663,9 @@ async function performSearch(){
 
 // TYPEWRITER HERO HEADLINE
 let _twGeneration = 0;
+/* ============================================================
+   SECTION: HOMEPAGE HERO ANIMATION
+   ============================================================ */
 function playTypewriterHero(startDelay) {
   const el = document.getElementById('typewriterH1');
   if (!el) return;
@@ -3580,6 +3765,9 @@ async function loadHeroFloatCards(){
 loadHeroFloatCards();
 
 // FAQ ACCORDION + SEARCH/FILTER
+/* ============================================================
+   SECTION: FAQ + HOW-IT-WORKS PAGE INTERACTIONS
+   ============================================================ */
 function toggleFaq(q){
   const item = q.closest('.faq-item');
   const wasOpen = item.classList.contains('open');
@@ -3618,7 +3806,14 @@ function setHiwTab(pill, tab){
   document.getElementById('hiwContractor').style.display = tab === 'contractor' ? '' : 'none';
 }
 
-// SCROLL REVEAL ANIMATION
+/* ============================================================
+   SECTION: SCROLL REVEAL ANIMATION + STARTUP DEEP-LINK DISPATCH
+   One IIFE that runs on load: sets up the reveal-on-scroll
+   observer, then (at the bottom of this block) reads
+   window.location.hash to jump straight to a deep-linked page —
+   see DEEP_LINKABLE_PAGES / AUTH_GATED_DEEP_LINK_PAGES near the
+   ROUTING & DEEP LINKING section above.
+   ============================================================ */
 (function() {
   const revealSelectors = '.section-header, .cat-pills, .urgent-strip, .contractor-card, .why-card, .cta-section, .emerg-card, .form-card, .estimate-card, .info-card, .review-card, .pstat, .portfolio-img';
   const groupStagger = ['.contractors-grid', '.why-grid', '.emergency-grid', '.profile-stats', '.info-grid', '.portfolio-grid'];
