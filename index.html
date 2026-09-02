@@ -2749,7 +2749,7 @@ async function handleAvatarUpload(file){
   document.getElementById('avatarFileInput').value = '';
 }
 
-function saveProfile(){
+async function saveProfile(){
   let ok = true;
   const first = document.getElementById('pfFirst').value.trim();
   const email = document.getElementById('pfEmail').value.trim();
@@ -2758,12 +2758,33 @@ function saveProfile(){
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   setFieldError('pfEmail','pfEmailErr', !emailOk); if(!emailOk) ok=false;
   if (!ok) { showToast('Please fix the highlighted fields', 'error'); return; }
-  if (currentUser) {
-    currentUser.first = first;
-    currentUser.last = document.getElementById('pfLast').value.trim();
-    currentUser.email = email;
-    updateNav();
-  }
+  if (!currentUser) { showToast('Please sign in again.', 'error'); return; }
+
+  const last = document.getElementById('pfLast').value.trim();
+  const btn = document.querySelector('button[onclick="saveProfile()"]');
+  const originalText = btn ? btn.textContent : null;
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+
+  // The actual bug: this used to only update the in-memory currentUser
+  // object and show a success toast without ever writing to the database,
+  // so the change looked saved until the next reload re-fetched the old
+  // row from profiles. Persisting first/last name here is what fixes that.
+  // Note: email is only synced to the profiles table's display copy, not
+  // the underlying Supabase Auth login email — changing the actual login
+  // email requires a separate confirmation flow and isn't handled here.
+  const { error } = await supabaseClient
+    .from('profiles')
+    .update({ first_name: first, last_name: last, email })
+    .eq('id', currentUser.id);
+
+  if (btn) { btn.disabled = false; btn.textContent = originalText; }
+
+  if (error) { showToast(error.message, 'error'); return; }
+
+  currentUser.first = first;
+  currentUser.last = last;
+  currentUser.email = email;
+  updateNav();
   showToast('Profile updated!', 'success');
 }
 const TOAST_ICONS = {
