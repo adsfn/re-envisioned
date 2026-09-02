@@ -1350,7 +1350,7 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
   <div class="page-content">
     <div class="legal-hero"><h1>Privacy Policy</h1><p>How Revise collects, uses, and protects your information.</p></div>
     <div class="legal-wrap">
-      <div class="legal-updated">Last updated: August 24, 2026</div>
+      <div class="legal-updated">Last updated: September 1, 2026</div>
       <div class="legal-toc">
         <h4>On this page</h4>
         <a onclick="document.getElementById('pp-1').scrollIntoView({behavior:'smooth'})">1. Information we collect</a>
@@ -1370,7 +1370,9 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
         <h3>Information you provide</h3>
         <p>When you create an account, request an estimate, or book a job, we collect information such as your name, email address, phone number, service address, and payment-related details. Contractors additionally provide business information, licensing and insurance documentation, and photos of past work.</p>
         <h3>Information collected automatically</h3>
-        <p>We automatically collect certain data when you use the Service, including device information, IP address, browser type, pages visited, and approximate location (derived from your device or the address you enter) to help match you with nearby pros.</p>
+        <p>We automatically collect certain data when you use the Service, including device information, IP address, browser type, and pages visited. We also use your device's approximate location — derived from your IP address or the postal code you enter — to help match you with nearby pros.</p>
+        <h3>Precise location (with your permission)</h3>
+        <p>Some features — like the "Use my location" search option and the homepage list of pros near you — ask your browser for your device's precise GPS/network location via its Geolocation API. Your browser will always show its own permission prompt before this happens, and we only receive your coordinates if you approve that prompt. We use precise location solely to sort and match you with nearby contractors during that session; we don't store your precise coordinates as part of your account profile, and you can deny or revoke this permission at any time in your browser's site settings without losing access to the rest of the Service (search still works with a typed postal code instead).</p>
         <h3>Information from messages and reviews</h3>
         <p>Messages sent through in-app chat, along with ratings and reviews you submit, are stored as part of your account activity.</p>
       </div>
@@ -1471,7 +1473,7 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
   <div class="page-content">
     <div class="legal-hero"><h1>Terms of Service</h1><p>The rules that govern your use of Revise.</p></div>
     <div class="legal-wrap">
-      <div class="legal-updated">Last updated: August 24, 2026</div>
+      <div class="legal-updated">Last updated: September 1, 2026</div>
       <div class="legal-toc">
         <h4>On this page</h4>
         <a onclick="document.getElementById('tos-1').scrollIntoView({behavior:'smooth'})">1. Acceptance of terms</a>
@@ -1489,7 +1491,7 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
       </div>
       <div class="legal-section"><p>These Terms of Service ("Terms") govern your access to and use of Revise (the "Service"). By creating an account or using Revise, you agree to be bound by these Terms. If you do not agree, please do not use the Service.</p></div>
       <div class="legal-section" id="tos-1"><h2>1. Acceptance of terms</h2><p>By accessing or using Revise, you confirm that you are at least 18 years old and capable of entering into a binding agreement, and that you agree to comply with these Terms and our Privacy Policy.</p></div>
-      <div class="legal-section" id="tos-2"><h2>2. Description of service</h2><p>Revise is a platform that connects homeowners seeking home services with independent local contractors. Revise facilitates discovery, communication, and booking between the two parties but is not itself a contractor and does not perform the work listed on the platform.</p></div>
+      <div class="legal-section" id="tos-2"><h2>2. Description of service</h2><p>Revise is a platform that connects homeowners seeking home services with independent local contractors. Revise facilitates discovery, communication, and booking between the two parties but is not itself a contractor and does not perform the work listed on the platform. Some search and matching features request your device's precise location through your browser to show nearby contractors; these features are optional and permission-based, and you can decline the browser's location prompt and continue using the Service with a typed postal code instead. See our Privacy Policy for details on how location data is used.</p></div>
       <div class="legal-section" id="tos-3"><h2>3. Accounts</h2><p>You are responsible for maintaining the confidentiality of your account credentials and for all activity under your account. You agree to provide accurate information when creating your account and to keep it up to date.</p></div>
       <div class="legal-section" id="tos-4"><h2>4. Contractors &amp; independent status</h2><p>Contractors on Revise are independent businesses, not employees or agents of Revise. Revise does not supervise, direct, or control the work performed by contractors, and is not responsible for the quality, safety, or legality of services provided. Contractors are solely responsible for holding any licenses, permits, and insurance required by law for their trade.</p></div>
       <div class="legal-section" id="tos-5"><h2>5. Bookings &amp; payments</h2><p>Pricing and payment terms for a job are agreed upon between the homeowner and the contractor. Where Revise facilitates payment through the app, a service fee may apply and will be disclosed before you confirm a booking. Cancellation policies may vary by contractor.</p></div>
@@ -2359,7 +2361,7 @@ const DEEP_LINKABLE_PAGES = ['about', 'how-it-works', 'careers', 'press', 'faq',
 // briefly seeing the page.
 const AUTH_GATED_DEEP_LINK_PAGES = ['chat-list', 'my-bookings', 'edit-profile'];
 
-function showPage(id){const wasAlreadyOnThisPage=document.getElementById('page-'+id)&&document.getElementById('page-'+id).classList.contains('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pg=document.getElementById('page-'+id);if(pg){pg.classList.add('active');window.scrollTo(0,0);}document.getElementById('mainNav').classList.remove('scrolled');if(DEEP_LINKABLE_PAGES.includes(id)||AUTH_GATED_DEEP_LINK_PAGES.includes(id)){history.replaceState(null,'','#'+id);}else if(window.location.hash){history.replaceState(null,'',window.location.pathname);}if(id==='home'&&!wasAlreadyOnThisPage&&typeof playTypewriterHero==='function')playTypewriterHero(150);if(id==='home'&&typeof loadHeroFloatCards==='function')loadHeroFloatCards();if(id==='edit-profile'&&typeof loadProfileForm==='function')loadProfileForm();if(id==='profile'&&typeof loadProfileData==='function')loadProfileData();if(id==='contractor-signup'&&typeof loadExistingPortfolioPhotos==='function')loadExistingPortfolioPhotos();if(id==='chat-list'&&typeof loadChatList==='function')loadChatList();if(id==='admin-review'&&typeof loadAdminReviewList==='function')loadAdminReviewList();if(id==='contractors'){if(!contractorsLoaded&&typeof loadContractorsFromSupabase==='function')loadContractorsFromSupabase();if(typeof initContractorsMap==='function')setTimeout(initContractorsMap,50);}if(id==='my-bookings'){if(typeof checkContractorStripeStatus==='function')checkContractorStripeStatus();if(typeof loadMyBookings==='function')loadMyBookings();}if(id==='estimate'&&typeof renderEstimateHeader==='function')renderEstimateHeader();}
+function showPage(id){const wasAlreadyOnThisPage=document.getElementById('page-'+id)&&document.getElementById('page-'+id).classList.contains('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pg=document.getElementById('page-'+id);if(pg){pg.classList.add('active');window.scrollTo(0,0);}document.getElementById('mainNav').classList.remove('scrolled');if(DEEP_LINKABLE_PAGES.includes(id)||AUTH_GATED_DEEP_LINK_PAGES.includes(id)){history.replaceState(null,'','#'+id);}else if(window.location.hash){history.replaceState(null,'',window.location.pathname);}if(id==='home'&&!wasAlreadyOnThisPage&&typeof playTypewriterHero==='function')playTypewriterHero(150);if(id==='home'&&typeof loadHeroFloatCards==='function')loadHeroFloatCards();if(id==='edit-profile'&&typeof loadProfileForm==='function')loadProfileForm();if(id==='profile'&&typeof loadProfileData==='function')loadProfileData();if(id==='contractor-signup'&&typeof loadExistingPortfolioPhotos==='function')loadExistingPortfolioPhotos();if(id==='contractor-signup'&&typeof guardContractorSignupPage==='function')guardContractorSignupPage();if(id==='chat-list'&&typeof loadChatList==='function')loadChatList();if(id==='admin-review'&&typeof loadAdminReviewList==='function')loadAdminReviewList();if(id==='contractors'){if(!contractorsLoaded&&typeof loadContractorsFromSupabase==='function')loadContractorsFromSupabase();if(typeof initContractorsMap==='function')setTimeout(initContractorsMap,50);}if(id==='my-bookings'){if(typeof checkContractorStripeStatus==='function')checkContractorStripeStatus();if(typeof loadMyBookings==='function')loadMyBookings();}if(id==='estimate'&&typeof renderEstimateHeader==='function')renderEstimateHeader();}
 
 // Pulls the selected contractor's real info into the profile page header/stats
 /* ============================================================
@@ -3094,6 +3096,32 @@ function renderPortfolioPhotos(){
 
 // Loads the contractor's already-saved portfolio photos so re-opening the
 // signup/edit form doesn't wipe them out on the next submit.
+// Blocks a homeowner/contractor who's already completed the pro signup form
+// from doing it again — resubmitting would upsert() onto their existing
+// contractors row and silently overwrite real profile data (business name,
+// trade, bio, etc.) with whatever's currently in the mostly-blank form,
+// since this form doesn't pre-fill from an existing row. Called both when
+// the page is entered (see showPage's dispatch table) and again right
+// before actual submission, so it can't be bypassed by a direct deep link
+// or by leaving the page open across a signup that happened elsewhere.
+async function checkAlreadyRegisteredAsContractor() {
+  if (!currentUser) return false;
+  const { data, error } = await supabaseClient
+    .from('contractors')
+    .select('id')
+    .eq('id', currentUser.id)
+    .maybeSingle();
+  return !error && !!data;
+}
+
+async function guardContractorSignupPage() {
+  const alreadyPro = await checkAlreadyRegisteredAsContractor();
+  if (alreadyPro) {
+    showToast("You're already registered as a pro on Revise — you can't sign up twice.", 'info');
+    showPage('my-bookings');
+  }
+}
+
 async function loadExistingPortfolioPhotos(){
   if (!currentUser) return;
   const { data, error } = await supabaseClient
@@ -3221,6 +3249,11 @@ async function submitContractorForm(){
   }
   if (rateLimited('submitContractor', 2500)) return;
   if (!currentUser){ pendingRedirect='contractor-signup'; openAuth('signup'); return; }
+  if (await checkAlreadyRegisteredAsContractor()) {
+    showToast("You're already registered as a pro on Revise — you can't sign up twice.", 'info');
+    showPage('my-bookings');
+    return;
+  }
 
   const bizName = document.getElementById('cBizName').value.trim();
   const years = parseInt(document.getElementById('cYears').value, 10) || 0;
