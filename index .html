@@ -82,6 +82,12 @@ nav.scrolled .btn-nav-outline:hover { background: #1558a8; color: #fff; }
 .search-box { background: #fff; border-radius: 20px; padding: 10px; display: flex; gap: 8px; align-items: center; box-shadow: 0 8px 40px rgba(0,0,0,.2); max-width: 680px; margin: 0 auto 48px; }
 .search-field { flex: 1; display: flex; flex-direction: column; padding: 8px 14px; }
 .search-field label { font-size: 11px; font-weight: 700; color: #1558a8; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px; text-align: center; }
+.job-suggestion-field { position: relative; }
+.job-suggestion { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 6px; background: #1a2535; color: #fff; font-size: 12px; font-weight: 500; padding: 7px 12px; border-radius: 10px; white-space: nowrap; box-shadow: 0 6px 20px rgba(0,0,0,.18); z-index: 20; display: none; cursor: pointer; }
+.job-suggestion.show { display: flex; align-items: center; gap: 6px; animation: jobSuggestFade .15s ease; }
+.job-suggestion strong { color: #7fb2ff; }
+.job-suggestion::before { content: ''; position: absolute; top: -5px; left: 50%; transform: translateX(-50%); border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 6px solid #1a2535; }
+@keyframes jobSuggestFade { from { opacity: 0; transform: translateX(-50%) translateY(-4px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 .search-field input, .search-field select { border: none; outline: none; font-size: 14px; color: #1a2535; background: none; font-weight: 500; width: 100%; text-align: center; }
 .search-divider { width: 1px; height: 36px; background: #e2e8f0; flex-shrink: 0; }
 .search-btn { background: #f97316; color: #fff; border: none; padding: 14px 28px; border-radius: 14px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all .2s; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
@@ -563,6 +569,12 @@ nav.scrolled .btn-nav-outline:hover { background: #1558a8; color: #fff; }
 .btn-outline-lg:hover { background: #1558a8; color: #fff; }
 
 .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: #1a2535; color: #fff; padding: 12px 24px; border-radius: 30px; font-size: 14px; font-weight: 600; z-index: 9999; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,.2); display: flex; align-items: center; gap: 10px; }
+.cookie-notice { position: fixed; bottom: 0; left: 0; right: 0; background: #1a2535; color: #d6dde8; padding: 16px 24px; z-index: 9998; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 16px; font-size: 13px; box-shadow: 0 -4px 20px rgba(0,0,0,.15); transform: translateY(100%); transition: transform .35s ease; }
+.cookie-notice.show { transform: translateY(0); }
+.cookie-notice a { color: #7fb2ff; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.cookie-notice button { background: #1558a8; color: #fff; border: none; border-radius: 20px; padding: 8px 20px; font-size: 13px; font-weight: 700; cursor: pointer; flex-shrink: 0; transition: background .2s; }
+.cookie-notice button:hover { background: #0f4383; }
+.cookie-notice p { margin: 0; max-width: 640px; text-align: center; line-height: 1.5; }
 
 /* Full-page redirect overlay — shown the instant a button that navigates to
    an external site (Stripe onboarding, Stripe Checkout) is clicked. Covers
@@ -681,9 +693,10 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
         <h1 id="typewriterH1">Find Your <span>Local Pro</span><br>At Fair Prices</h1>
         <p class="load-in-p">Skip the big companies. Hire verified local contractors directly — transparent pricing, real reviews, no hidden fees.</p>
         <div class="search-box load-in-search">
-          <div class="search-field">
+          <div class="search-field job-suggestion-field">
             <label>What do you need?</label>
-            <input type="text" id="heroSearchJob" placeholder="e.g. Plumbing..." maxlength="60" oninput="onlyLetters(this)">
+            <input type="text" id="heroSearchJob" placeholder="e.g. Plumbing..." maxlength="60" oninput="onlyLetters(this);updateJobSuggestion(this);" onkeydown="if(event.key==='Enter')acceptJobSuggestionSilently();">
+            <div id="jobSuggestion" class="job-suggestion" onclick="acceptJobSuggestion()"></div>
           </div>
           <div class="search-divider"></div>
           <div class="search-field" style="min-width:120px;">
@@ -1674,6 +1687,10 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="cookie-notice" id="cookieNotice">
+  <p>Revise uses essential cookies to keep you signed in and remember your preferences — nothing more, no ad tracking. See our <a onclick="showPage('privacy')">Privacy Policy</a> for details.</p>
+  <button onclick="dismissCookieNotice()">Got it</button>
+</div>
 <div class="redirect-overlay" id="redirectOverlay">
   <div class="redirect-spinner"></div>
   <div class="redirect-overlay-text" id="redirectOverlayText">Redirecting you to Stripe's secure page…</div>
@@ -2804,6 +2821,28 @@ function showToast(msg, type){
   clearTimeout(t._hideTimer);
   t._hideTimer = setTimeout(()=>t.classList.remove('show'),2800);
 }
+
+/* ============================================================
+   SECTION: COOKIE NOTICE
+   Simple, non-blocking disclosure (not a consent gate) — Revise
+   only sets essential/functional cookies (auth session, Stripe
+   checkout), which don't legally require consent-gating under
+   GDPR/ePrivacy, just disclosure. This just surfaces that
+   disclosure once per visitor via localStorage, matching the
+   cookie language already in the Privacy Policy.
+   ============================================================ */
+function initCookieNotice() {
+  if (localStorage.getItem('reviseCookieNoticeDismissed') === 'true') return;
+  const el = document.getElementById('cookieNotice');
+  if (el) setTimeout(() => el.classList.add('show'), 600);
+}
+function dismissCookieNotice() {
+  const el = document.getElementById('cookieNotice');
+  if (el) el.classList.remove('show');
+  try { localStorage.setItem('reviseCookieNoticeDismissed', 'true'); } catch (e) {}
+}
+initCookieNotice();
+
 /* ============================================================
    SECTION: CONTRACTOR PROFILE DATA + BOOKING/ESTIMATE ENTRY
    selectedContractorId is the global that ties the contractor
@@ -3331,6 +3370,85 @@ function updateEstimate(sel){const el=document.getElementById('estTotal');if(sel
    service-area geocoding (OpenStreetMap Nominatim), Haversine
    distance sorting, and the Leaflet map + markers.
    ============================================================ */
+
+// JOB SEARCH AUTOCOMPLETE — same category list as the homepage cat-pills.
+// Typing a prefix ("Plu") or a near-miss/typo ("Plumbin") shows a preview
+// of the matching category; pressing Search (or Enter, or clicking the
+// preview) fills in the full word before the search actually runs.
+const JOB_SEARCH_CATEGORIES = ['Plumbing', 'Electrical', 'Landscaping', 'Renovation', 'Cleaning', 'HVAC', 'Painting', 'Carpentry', 'Roofing', 'Handyman'];
+let currentJobSuggestion = null; // the full category word currently being suggested, or null
+
+// Standard Levenshtein edit distance, used to catch near-misses/typos
+// ("Plumbin", "Plumming") that a plain startsWith() wouldn't.
+function levenshteinDistance(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+function findJobSuggestion(rawVal) {
+  const val = rawVal.trim().toLowerCase();
+  if (val.length < 2) return null;
+  // Exact match (possibly different case) — nothing to suggest.
+  if (JOB_SEARCH_CATEGORIES.some(c => c.toLowerCase() === val)) return null;
+
+  // Fast path: prefix match, e.g. "Plu" -> "Plumbing".
+  const prefixMatch = JOB_SEARCH_CATEGORIES.find(c => c.toLowerCase().startsWith(val));
+  if (prefixMatch) return prefixMatch;
+
+  // Slow path: typo tolerance for longer near-complete words, e.g.
+  // "Plumbin" or "Plumming" -> "Plumbing". Threshold scales gently with
+  // word length so short inputs don't trigger noisy false matches.
+  if (val.length >= 5) {
+    let best = null, bestDist = Infinity;
+    for (const cat of JOB_SEARCH_CATEGORIES) {
+      const d = levenshteinDistance(val, cat.toLowerCase());
+      if (d < bestDist) { bestDist = d; best = cat; }
+    }
+    const threshold = Math.max(1, Math.floor(val.length / 4));
+    if (best && bestDist <= threshold) return best;
+  }
+  return null;
+}
+
+function updateJobSuggestion(inputEl) {
+  const box = document.getElementById('jobSuggestion');
+  if (!box) return;
+  const suggestion = findJobSuggestion(inputEl.value);
+  currentJobSuggestion = suggestion;
+  if (suggestion) {
+    box.innerHTML = `Did you mean <strong>${escapeHtml(suggestion)}</strong>?`;
+    box.classList.add('show');
+  } else {
+    box.classList.remove('show');
+    box.innerHTML = '';
+  }
+}
+
+function acceptJobSuggestion() {
+  if (!currentJobSuggestion) return;
+  const input = document.getElementById('heroSearchJob');
+  if (input) input.value = currentJobSuggestion;
+  const box = document.getElementById('jobSuggestion');
+  if (box) { box.classList.remove('show'); box.innerHTML = ''; }
+  currentJobSuggestion = null;
+}
+
+// Enter-key convenience: accept the suggestion without stealing focus away
+// from the flow of also triggering search, since Enter on a text input
+// inside this form also submits the search itself.
+function acceptJobSuggestionSilently() {
+  if (currentJobSuggestion) acceptJobSuggestion();
+}
+
 function skeletonCardHTML(){
   return `<div class="skeleton-card">
     <div class="skeleton-img"></div>
@@ -3718,6 +3836,10 @@ function setResultsView(view){
 
 async function performSearch(){
   if (rateLimited('search', 2000)) return;
+  // If a "Did you mean X?" preview is currently showing for the job field,
+  // pressing Search accepts it automatically rather than searching on
+  // whatever partial/misspelled word is still sitting in the input.
+  if (currentJobSuggestion) acceptJobSuggestion();
   const jobInput = document.getElementById('heroSearchJob');
   const zipInput = document.getElementById('heroSearchZip');
   const jobVal = jobInput ? jobInput.value.trim() : '';
