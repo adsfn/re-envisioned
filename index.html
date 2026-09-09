@@ -46,7 +46,7 @@ nav.scrolled .nav-hamburger svg { color: #1558a8; }
     position: fixed; top: 64px; left: 0; right: 0;
     background: #fff; flex-direction: column; gap: 0;
     box-shadow: 0 12px 30px rgba(0,0,0,.18);
-    max-height: calc(100vh - 64px); overflow-y: auto;
+    max-height: calc(100vh - 64px); max-height: calc(100dvh - 64px); overflow-y: auto;
     border-radius: 0 0 16px 16px;
     opacity: 0; visibility: hidden; transform: translateY(-8px);
     transition: opacity .18s ease, transform .18s ease, visibility 0s linear .18s;
@@ -98,12 +98,12 @@ nav.scrolled .btn-nav-outline:hover { background: #1558a8; color: #fff; }
 .dropdown-item.danger:hover { background: #fef2f2; }
 
 /* PAGES */
-.page { display: none; min-height: 100vh; flex-direction: column; }
+.page { display: none; min-height: 100vh; min-height: 100dvh; flex-direction: column; }
 .page.active { display: flex; }
 .page-content { flex: 1; }
 
 /* HERO */
-.hero { position: relative; min-height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; text-align: center; padding: 120px 24px 80px; }
+.hero { position: relative; min-height: 100vh; min-height: 100dvh; display: flex; align-items: center; justify-content: center; overflow: hidden; text-align: center; padding: 120px 24px 80px; }
 .hero-bg { position: absolute; inset: 0; }
 .hero-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 1.4s ease-in-out; background-size: cover; background-position: center; }
 .hero-slide.active { opacity: 1; }
@@ -403,7 +403,7 @@ nav.scrolled .btn-nav-outline:hover { background: #1558a8; color: #fff; }
      layout no longer makes sense — it could tower over a short viewport
      and stickiness has nothing left to scroll past. Size it to the
      viewport instead. */
-  .results-map { height: calc(100vh - 200px); min-height: 380px; position: static; }
+  .results-map { height: calc(100vh - 200px); height: calc(100dvh - 200px); min-height: 380px; position: static; }
   .results-map { position: static; height: 420px; }
 }
 .inner-hero h1 { font-size: 36px; font-weight: 800; margin-bottom: 10px; }
@@ -567,7 +567,7 @@ nav.scrolled .btn-nav-outline:hover { background: #1558a8; color: #fff; }
 .emerg-card .eta { display: inline-block; background: #dc2626; color: #fff; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-top: 12px; }
 
 /* MODALS */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); overflow-y: auto; }
 .modal { background: #fff; border-radius: 24px; padding: 40px; width: 440px; max-width: 96vw; box-shadow: 0 20px 60px rgba(0,0,0,.2); position: relative; }
 .modal-logo { text-align: center; font-size: 22px; font-weight: 800; color: #1558a8; margin-bottom: 6px; }
 .modal-logo span { color: #f97316; }
@@ -601,7 +601,7 @@ nav.scrolled .btn-nav-outline:hover { background: #1558a8; color: #fff; }
 .loading-dots::after { content:''; animation: dots 1.2s steps(3,end) infinite; }
 @keyframes dots { 0%{content:''} 33%{content:'.'} 66%{content:'..'} 100%{content:'...'} }
 
-.schedule-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.schedule-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); overflow-y: auto; }
 .schedule-modal { background: #fff; border-radius: 20px; padding: 32px; width: 380px; max-width: 94vw; box-shadow: 0 16px 50px rgba(0,0,0,.15); }
 .schedule-modal h3 { font-size: 20px; font-weight: 800; margin-bottom: 18px; }
 .time-slots { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 12px 0; }
@@ -730,6 +730,22 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
      more of the available width. */
   .modal { padding: 24px 20px; }
   .close-modal { top: 8px; right: 8px; }
+  /* The real bug: .modal-overlay centered its content with no scrolling,
+     so the taller sign-up form (role picker + name + email + password +
+     confirm password) got clipped equally off the top AND bottom with no
+     way to reach the rest — including the close button up top. Anchoring
+     to the top instead of centering means the top of the modal (and its
+     close button) is always the first thing rendered and visible, and the
+     rest becomes reachable by scrolling down instead of being clipped.
+     overflow-y:auto on .modal-overlay (set above, applies at all sizes)
+     is what actually makes that scrolling possible. */
+  .modal-overlay { align-items: flex-start; padding: 32px 0; }
+  /* Same class of bug as the auth modal: no scroll handling meant the
+     Confirm booking button (no close "X" here at all — it's the only way
+     out besides Cancel) could get clipped off the bottom on a short
+     viewport, with nothing scrollable to reach it. */
+  .schedule-overlay { align-items: flex-start; padding: 32px 0; }
+  .schedule-modal { padding: 20px; }
 
   /* MY BOOKINGS — action buttons (e.g. "Pay now" + "Pay with cash
      instead" side by side) relied on width:auto + flex-wrap, which could
