@@ -756,6 +756,15 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
   .booking-actions { flex-direction: column; width: 100%; }
   .booking-actions .btn-card { width: 100% !important; }
   .booking-bottom { flex-direction: column; align-items: stretch; }
+
+  /* EMERGENCY/URGENT BANNER — was a rigid row with no wrap handling, so
+     the description text ("Burst pipe · No electricity...") had nowhere
+     to go and got visually clipped behind the "View emergencies" pill.
+     Stacks cleanly instead: icon+heading, then the description (free to
+     wrap normally), then a full-width pill button. */
+  .urgent-strip { flex-direction: column; align-items: flex-start; gap: 14px; padding: 20px; }
+  .urgent-strip .left { width: 100%; }
+  .urgent-strip .pill { width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px 16px; }
 }
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
