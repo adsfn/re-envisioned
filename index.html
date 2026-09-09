@@ -724,6 +724,22 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
   .page-pad-40-margin { margin-left: 16px !important; margin-right: 16px !important; }
   .form-card { padding: 24px 16px; margin: 20px 16px; }
   .emergency-grid { padding: 24px 16px; }
+
+  /* AUTH MODAL (sign in / sign up) — same 40px padding issue as above,
+     inside a modal already capped at 96vw, so it ate proportionally even
+     more of the available width. */
+  .modal { padding: 24px 20px; }
+  .close-modal { top: 8px; right: 8px; }
+
+  /* MY BOOKINGS — action buttons (e.g. "Pay now" + "Pay with cash
+     instead" side by side) relied on width:auto + flex-wrap, which could
+     land as two oddly-sized, cramped buttons instead of clean, easily
+     tappable full-width ones. */
+  .booking-card { padding: 14px; gap: 12px; }
+  .booking-icon { width: 40px; height: 40px; }
+  .booking-actions { flex-direction: column; width: 100%; }
+  .booking-actions .btn-card { width: 100% !important; }
+  .booking-bottom { flex-direction: column; align-items: stretch; }
 }
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
