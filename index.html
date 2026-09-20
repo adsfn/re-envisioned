@@ -31,7 +31,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
 /* NAV */
 nav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; padding: 0 40px; height: 64px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; transition: all .3s; }
-nav.scrolled { background: rgba(255,255,255,.32); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); box-shadow: 0 4px 24px rgba(15,52,96,.1), inset 0 1px 0 rgba(255,255,255,.5); border-bottom: 1px solid rgba(255,255,255,.35); }
+nav.scrolled { background: rgba(255,255,255,.62); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); box-shadow: 0 4px 24px rgba(15,52,96,.12), inset 0 1px 0 rgba(255,255,255,.6); border-bottom: 1px solid rgba(255,255,255,.5); }
+/* Masks the hairline seam backdrop-filter leaves at the very top edge of a
+   fixed element (nothing above the viewport for it to sample/blur into) —
+   a thin solid strip that isn't subject to the blur discontinuity. */
+nav.scrolled::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: rgba(255,255,255,.62); }
 .nav-hamburger { display: none; background: none; border: none; cursor: pointer; padding: 8px; width: 44px; height: 44px; align-items: center; justify-content: center; border-radius: 8px; }
 .nav-hamburger svg { width: 22px; height: 22px; color: #fff; transition: color .3s; }
 nav.scrolled .nav-hamburger svg { color: #1558a8; }
@@ -77,9 +81,9 @@ nav.scrolled .logo { color: #1558a8; }
 .logo span { color: #f97316; }
 .nav-links { display: flex; gap: 6px; }
 .nav-btn { background: none; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; color: rgba(255,255,255,.9); font-weight: 500; transition: all .2s; }
-nav.scrolled .nav-btn { color: #445; }
+nav.scrolled .nav-btn { color: #1a2535; }
 .nav-greeting { font-size: 14px; font-weight: 500; color: rgba(255,255,255,.9); transition: color .3s; }
-nav.scrolled .nav-greeting { color: #445; }
+nav.scrolled .nav-greeting { color: #1a2535; }
 .nav-btn:hover { background: rgba(255,255,255,.15); color: #fff; }
 nav.scrolled .nav-btn:hover { background: #eef3fb; color: #1558a8; }
 .nav-right { display: flex; gap: 8px; align-items: center; justify-self: end; }
@@ -140,15 +144,6 @@ nav.scrolled .btn-nav-outline:hover { background: #1558a8; color: #fff; }
 .hero-stat .lbl { font-size: 13px; opacity: .75; margin-top: 2px; }
 
 /* FLOATING CARDS */
-.hero-cards { position: absolute; right: 48px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 12px; z-index: 2; }
-.float-card { background: rgba(255,255,255,.95); backdrop-filter: blur(10px); border-radius: 16px; padding: 14px 18px; box-shadow: 0 8px 30px rgba(0,0,0,.15); min-width: 200px; opacity: 0; animation: cardLoadIn .6s cubic-bezier(.21,.6,.35,1) both, float 3s ease-in-out infinite; animation-delay: .9s, .9s; }
-.float-card:nth-child(2) { animation-delay: 1.05s, 1.65s; margin-left: 20px; }
-.float-card:nth-child(3) { animation-delay: 1.2s, 1.8s; }
-@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
-.float-card .fc-label { font-size: 11px; font-weight: 700; color: #889; text-transform: uppercase; letter-spacing: .5px; }
-.float-card .fc-val { font-size: 15px; font-weight: 700; color: #1a2535; margin-top: 4px; }
-.float-card .fc-sub { font-size: 12px; color: #667; margin-top: 2px; }
-.fc-icon { font-size: 22px; margin-bottom: 6px; }
 
 /* URGENT BANNER */
 .urgent-strip { background: linear-gradient(135deg, #dc2626, #991b1b); color: #fff; padding: 18px 40px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
@@ -660,7 +655,6 @@ nav.scrolled .btn-nav-outline:hover { background: #1558a8; color: #fff; }
 @keyframes fadeUpInSm { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeScaleIn { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: scale(1); } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes cardLoadIn { from { opacity: 0; transform: translateX(70px) scale(.96); } to { opacity: 1; transform: translateX(0) scale(1); } }
 
 nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
 .load-in-badge { animation: fadeUpInSm .6s cubic-bezier(.21,.6,.35,1) .15s both; }
@@ -685,7 +679,6 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
 
 @media (max-width: 768px) {
   .hero h1 { font-size: 36px; }
-  .hero-cards { display: none; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
   .profile-stats { grid-template-columns: repeat(2,1fr); }
   nav { padding: 0 16px; }
@@ -851,12 +844,6 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
           <div class="hero-stat"><div class="num">4.8<svg class="ic star-ic" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.8 21.1 7 14.2 2 9.3l6.9-1z"/></svg></div><div class="lbl">Avg Rating</div></div>
           <div class="hero-stat"><div class="num">18k+</div><div class="lbl">Jobs Done</div></div>
         </div>
-      </div>
-      <!-- Floating cards — populated with real data by loadHeroFloatCards() -->
-      <div class="hero-cards">
-        <div class="float-card" id="heroCard1"><div class="fc-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg></div><div class="fc-label">Recently Verified</div><div class="fc-val" id="heroCard1Val">A local pro</div><div class="fc-sub" id="heroCard1Sub">NYC DOB license confirmed</div></div>
-        <div class="float-card"><div class="fc-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg></div><div class="fc-label">Urgent Requests</div><div class="fc-val">Priority routing</div><div class="fc-sub">Available around the clock</div></div>
-        <div class="float-card" id="heroCard3"><div class="fc-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></div><div class="fc-label" id="heroCard3Label">0% Platform Fee</div><div class="fc-val" id="heroCard3Val">Pros keep 100%</div><div class="fc-sub">No hidden fees</div></div>
       </div>
     </div>
 
@@ -2538,7 +2525,7 @@ const DEEP_LINKABLE_PAGES = ['about', 'how-it-works', 'careers', 'press', 'faq',
 // briefly seeing the page.
 const AUTH_GATED_DEEP_LINK_PAGES = ['chat-list', 'my-bookings', 'edit-profile'];
 
-function showPage(id){const wasAlreadyOnThisPage=document.getElementById('page-'+id)&&document.getElementById('page-'+id).classList.contains('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pg=document.getElementById('page-'+id);if(pg){pg.classList.add('active');window.scrollTo(0,0);}document.getElementById('mainNav').classList.remove('scrolled');if(DEEP_LINKABLE_PAGES.includes(id)||AUTH_GATED_DEEP_LINK_PAGES.includes(id)){history.replaceState(null,'','#'+id);}else if(window.location.hash){history.replaceState(null,'',window.location.pathname);}if(id==='home'&&!wasAlreadyOnThisPage&&typeof playTypewriterHero==='function')playTypewriterHero(150);if(id==='home'&&typeof loadHeroFloatCards==='function')loadHeroFloatCards();if(id==='edit-profile'&&typeof loadProfileForm==='function')loadProfileForm();if(id==='profile'&&typeof loadProfileData==='function')loadProfileData();if(id==='contractor-signup'&&typeof loadExistingPortfolioPhotos==='function')loadExistingPortfolioPhotos();if(id==='contractor-signup'&&typeof guardContractorSignupPage==='function')guardContractorSignupPage();if(id==='chat-list'&&typeof loadChatList==='function')loadChatList();if(id==='admin-review'&&typeof loadAdminReviewList==='function')loadAdminReviewList();if(id==='contractors'){if(!contractorsLoaded&&typeof loadContractorsFromSupabase==='function')loadContractorsFromSupabase();if(typeof initContractorsMap==='function')setTimeout(initContractorsMap,50);}if(id==='my-bookings'){if(typeof checkContractorStripeStatus==='function')checkContractorStripeStatus();if(typeof loadMyBookings==='function')loadMyBookings();}if(id==='estimate'&&typeof renderEstimateHeader==='function')renderEstimateHeader();}
+function showPage(id){const wasAlreadyOnThisPage=document.getElementById('page-'+id)&&document.getElementById('page-'+id).classList.contains('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pg=document.getElementById('page-'+id);if(pg){pg.classList.add('active');window.scrollTo(0,0);}document.getElementById('mainNav').classList.remove('scrolled');if(DEEP_LINKABLE_PAGES.includes(id)||AUTH_GATED_DEEP_LINK_PAGES.includes(id)){history.replaceState(null,'','#'+id);}else if(window.location.hash){history.replaceState(null,'',window.location.pathname);}if(id==='home'&&!wasAlreadyOnThisPage&&typeof playTypewriterHero==='function')playTypewriterHero(150);if(id==='edit-profile'&&typeof loadProfileForm==='function')loadProfileForm();if(id==='profile'&&typeof loadProfileData==='function')loadProfileData();if(id==='contractor-signup'&&typeof loadExistingPortfolioPhotos==='function')loadExistingPortfolioPhotos();if(id==='contractor-signup'&&typeof guardContractorSignupPage==='function')guardContractorSignupPage();if(id==='chat-list'&&typeof loadChatList==='function')loadChatList();if(id==='admin-review'&&typeof loadAdminReviewList==='function')loadAdminReviewList();if(id==='contractors'){if(!contractorsLoaded&&typeof loadContractorsFromSupabase==='function')loadContractorsFromSupabase();if(typeof initContractorsMap==='function')setTimeout(initContractorsMap,50);}if(id==='my-bookings'){if(typeof checkContractorStripeStatus==='function')checkContractorStripeStatus();if(typeof loadMyBookings==='function')loadMyBookings();}if(id==='estimate'&&typeof renderEstimateHeader==='function')renderEstimateHeader();}
 
 // Pulls the selected contractor's real info into the profile page header/stats
 /* ============================================================
@@ -4112,58 +4099,6 @@ function playTypewriterHero(startDelay) {
   setTimeout(step, startDelay || 0);
 }
 playTypewriterHero(900);
-
-// HERO FLOAT CARDS — replaces old hardcoded fake businesses ("Mike's
-// Plumbing", "PowerUp Electric") with real data where it exists.
-// Card 1: a real, recently license-verified contractor (falls back to
-//   generic copy if none exist yet).
-// Card 3: a real completed & paid job's trade + price, if one exists yet
-//   (falls back to the 0%-fee value prop otherwise — there's no fake
-//   number substituted in either case).
-// The middle "Urgent Requests" card stays static and honest on purpose:
-// there's no live availability/ETA tracking system in the app, so rather
-// than invent a fake ETA tied to a fake business, it just states the real
-// policy (urgent requests get priority routing) without fabricating specifics.
-async function loadHeroFloatCards(){
-  try {
-    const { data: contractorRows } = await supabaseClient
-      .from('contractors')
-      .select('business_name, trade')
-      .eq('license_verified', true)
-      .limit(1);
-    const contractor = contractorRows && contractorRows[0];
-    if (contractor) {
-      const valEl = document.getElementById('heroCard1Val');
-      const subEl = document.getElementById('heroCard1Sub');
-      if (valEl) valEl.textContent = contractor.business_name || 'A local pro';
-      if (subEl) subEl.textContent = contractor.trade ? `${contractor.trade} · NYC DOB verified` : 'NYC DOB license confirmed';
-    }
-  } catch (err) {
-    // Non-critical decoration — leave the honest generic fallback in place.
-    console.error('loadHeroFloatCards: contractor lookup failed', err);
-  }
-
-  try {
-    const { data: bookingRows } = await supabaseClient
-      .from('bookings')
-      .select('price_amount, contractor:contractor_id ( trade )')
-      .eq('payment_status', 'paid')
-      .order('completed_at', { ascending: false })
-      .limit(1);
-    const booking = bookingRows && bookingRows[0];
-    if (booking && booking.price_amount) {
-      const labelEl = document.getElementById('heroCard3Label');
-      const valEl = document.getElementById('heroCard3Val');
-      if (labelEl) labelEl.textContent = 'Just Completed';
-      if (valEl) valEl.textContent = `${booking.contractor?.trade || 'Job'} — $${Number(booking.price_amount).toFixed(0)}`;
-    }
-    // If no paid bookings exist yet, the "0% Platform Fee" fallback
-    // already in the HTML stays as-is — still true, still honest.
-  } catch (err) {
-    console.error('loadHeroFloatCards: booking lookup failed', err);
-  }
-}
-loadHeroFloatCards();
 
 // FAQ ACCORDION + SEARCH/FILTER
 /* ============================================================
