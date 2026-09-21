@@ -386,14 +386,19 @@ nav.scrolled .btn-nav-outline:hover { background: #1558a8; color: #fff; }
   .results-view-toggle { display: flex; }
   .results-layout { grid-template-columns: 1fr; }
   .results-list, .results-map { display: none; }
-  .results-list.active-view, .results-map.active-view { display: block; }
+  /* .results-map needs display:flex specifically (not the shared block
+     rule below) because #contractorsMap's sizing (flex:1; min-height:0;)
+     only works inside a flex container — without it the map div collapses
+     to near-zero height and Leaflet renders into an invisible box. This
+     was the real cause of "the map doesn't work on mobile". */
+  .results-list.active-view { display: block; }
+  .results-map.active-view { display: flex; }
   /* The map tab is the only thing on screen when active (list/map toggle
      above), so a fixed 640px + sticky position from the desktop two-pane
      layout no longer makes sense — it could tower over a short viewport
      and stickiness has nothing left to scroll past. Size it to the
      viewport instead. */
   .results-map { height: calc(100vh - 200px); height: calc(100dvh - 200px); min-height: 380px; position: static; }
-  .results-map { position: static; height: 420px; }
 }
 .inner-hero h1 { font-size: 36px; font-weight: 800; margin-bottom: 10px; }
 .inner-hero p { opacity: .85; font-size: 15px; }
@@ -4029,7 +4034,12 @@ async function performSearch(){
   grid.insertAdjacentHTML('afterbegin', Array(3).fill(skeletonCardHTML()).join(''));
   setTimeout(()=>{
     grid.querySelectorAll('.skeleton-card').forEach(s=>s.remove());
-    realCards.forEach(c=>c.style.display='');
+    // Re-derive real per-card visibility (and the "no pros match" empty
+    // state) via applyFilters() instead of blindly setting every card back
+    // to visible — that used to silently undo the filtering that had just
+    // correctly run a moment earlier (e.g. by distance), making filtered-
+    // out cards reappear and burying the "no results" message under them.
+    applyFilters();
     showToast('Found pros near you!', 'success');
   }, 1000);
 }
