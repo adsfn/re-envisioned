@@ -340,6 +340,21 @@ nav.scrolled .btn-nav-outline:hover { background: #1558a8; color: #fff; }
 .filter-group label, .filter-sort label { font-size: 11px; font-weight: 700; color: #889; text-transform: uppercase; letter-spacing: .4px; }
 .filter-group select, .filter-sort select { border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 600; color: #1a2535; background: #f8fafc; outline: none; cursor: pointer; transition: border-color .15s; min-width: 140px; }
 .filter-group select:hover, .filter-sort select:hover, .filter-group select:focus, .filter-sort select:focus { border-color: #1558a8; }
+.filter-trade { position: relative; }
+.trade-filter-btn { display: flex; align-items: center; gap: 8px; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 600; color: #1a2535; background: #f8fafc; outline: none; cursor: pointer; transition: border-color .15s; min-width: 140px; font-family: inherit; white-space: nowrap; }
+.trade-filter-btn svg { margin-left: auto; transition: transform .15s; }
+.trade-filter-btn.open svg { transform: rotate(180deg); }
+.trade-filter-btn:hover, .trade-filter-btn.open { border-color: #1558a8; }
+.trade-filter-btn.active { border-color: #1558a8; background: #eaf1fb; color: #1558a8; }
+.trade-filter-dropdown { display: none; position: fixed; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.14); padding: 8px; min-width: 190px; max-width: calc(100vw - 32px); z-index: 150; }
+.trade-filter-option { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #334; cursor: pointer; white-space: nowrap; }
+.trade-filter-option:hover { background: #f1f5f9; }
+.trade-filter-option.checked { color: #1558a8; }
+.trade-filter-check { width: 16px; height: 16px; border-radius: 5px; border: 1.5px solid #c2cbd6; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #fff; }
+.trade-filter-option.checked .trade-filter-check { background: #1558a8; border-color: #1558a8; }
+.trade-filter-check svg { width: 11px; height: 11px; }
+.trade-filter-clear { width: 100%; margin-top: 6px; padding: 9px 10px; border: none; border-top: 1px solid #edf1f5; background: none; font-size: 12.5px; font-weight: 700; color: #889; cursor: pointer; text-align: left; border-radius: 0 0 8px 8px; }
+.trade-filter-clear:hover { color: #b91c1c; }
 @media (max-width: 768px) {
   .filter-bar { top: 0; }
   .filter-bar-inner { padding: 12px 20px; }
@@ -1101,6 +1116,11 @@ nav { animation: navDropIn .6s cubic-bezier(.21,.6,.35,1) both; }
     <div class="inner-hero"><button class="back-btn" onclick="showPage('home')" style="color:rgba(255,255,255,.8);padding:0 0 16px;"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg> Back</button><h1>Pros near you</h1><p>Verified, insured, and ready to help</p></div>
     <div class="filter-bar" id="filterBar">
       <div class="filter-bar-inner">
+        <div class="filter-group filter-trade" id="tradeFilterGroup">
+          <label>Trade</label>
+          <button type="button" class="trade-filter-btn" id="tradeFilterBtn" onclick="toggleTradeDropdown()">All trades</button>
+          <div class="trade-filter-dropdown" id="tradeFilterDropdown"></div>
+        </div>
         <div class="filter-group">
           <label>Price</label>
           <select onchange="applyFilters()">
@@ -3772,7 +3792,7 @@ function skeletonCardHTML(){
 // ============================================================
 let LIVE_CONTRACTORS = [];       // raw rows from Supabase
 let contractorsLoaded = false;
-let currentTradeFilter = null;   // set by a homepage category pill or a matched job search term
+let currentTradeFilters = new Set(); // trades currently checked in the filter-bar Trade dropdown
 
 async function loadContractorsFromSupabase(){
   const grid = document.getElementById('contractorsGrid');
@@ -3854,12 +3874,14 @@ function updateMapBadge(){
 function applyFilters(){
   const bar = document.getElementById('filterBar');
   if(!bar) return;
+  renderTradeFilterUI();
   const selects = bar.querySelectorAll('select');
   const [price, rating, distance, availability, sort] = Array.from(selects).map(s => s.value);
   const grid = document.getElementById('contractorsGrid');
   if (!grid) return;
   const cards = Array.from(grid.querySelectorAll('.real-card'));
   let visibleCount = 0;
+  const tradeFilterLower = new Set(Array.from(currentTradeFilters).map(t => t.toLowerCase()));
 
   cards.forEach(card => {
     const cardRating = parseFloat(card.dataset.rating || '0');
@@ -3868,7 +3890,7 @@ function applyFilters(){
     const cardDistance = cardDistanceRaw ? parseFloat(cardDistanceRaw) : null;
     const cardTrades = (card.dataset.trades || '').split('|').map(t => t.trim().toLowerCase()).filter(Boolean);
     let matches = true;
-    if (currentTradeFilter && !cardTrades.includes(currentTradeFilter.trim().toLowerCase())) matches = false;
+    if (currentTradeFilters.size && !cardTrades.some(t => tradeFilterLower.has(t))) matches = false;
     if (rating !== 'any' && cardRating < parseFloat(rating)) matches = false;
     if (price === 'low' && cardPrice >= 75) matches = false;
     if (price === 'mid' && (cardPrice < 75 || cardPrice > 125)) matches = false;
@@ -3918,34 +3940,92 @@ function applyFilters(){
   showToast('Filters updated', 'info');
 }
 
-function renderTradeFilterChip(){
-  const bar = document.getElementById('filterBar');
-  if (!bar) return;
-  let chip = document.getElementById('tradeFilterChip');
-  if (currentTradeFilter) {
-    if (!chip) {
-      chip = document.createElement('div');
-      chip.id = 'tradeFilterChip';
-      chip.style.cssText = 'display:flex;align-items:center;gap:8px;background:#1558a8;color:#fff;font-size:13px;font-weight:600;padding:8px 14px;border-radius:20px;margin:0 auto 14px;width:fit-content;';
-      bar.insertAdjacentElement('beforebegin', chip);
-    }
-    chip.innerHTML = `Showing: ${escapeHtml(currentTradeFilter)} <svg onclick="clearTradeFilter()" class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px;cursor:pointer;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`;
-  } else if (chip) {
-    chip.remove();
-  }
+function renderTradeFilterUI(){
+  const btn = document.getElementById('tradeFilterBtn');
+  const panel = document.getElementById('tradeFilterDropdown');
+  if (!btn || !panel) return;
+
+  // Button label: "All trades" / the one selected trade / "X +N" when several.
+  const chosen = Array.from(currentTradeFilters);
+  btn.innerHTML = (chosen.length === 0 ? 'All trades' : chosen.length === 1 ? escapeHtml(chosen[0]) : `${escapeHtml(chosen[0])} +${chosen.length - 1}`)
+    + ' <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" style="width:12px;height:12px;flex-shrink:0;"><path d="m6 9 6 6 6-6"/></svg>';
+  btn.classList.toggle('active', chosen.length > 0);
+
+  panel.innerHTML = JOB_SEARCH_CATEGORIES.map(cat => {
+    const checked = currentTradeFilters.has(cat);
+    return `<label class="trade-filter-option${checked ? ' checked' : ''}" onclick="event.stopPropagation();toggleTradeFilterOption('${cat}')">
+      <span class="trade-filter-check">${checked ? '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 6 9 17l-5-5"/></svg>' : ''}</span>
+      ${escapeHtml(cat)}
+    </label>`;
+  }).join('') + `<button type="button" class="trade-filter-clear" onclick="event.stopPropagation();clearTradeFilter()">Clear${chosen.length ? ' (' + chosen.length + ')' : ''}</button>`;
 }
 
-// Called by the homepage "What do you need fixed?" category pills.
+function toggleTradeDropdown(){
+  const panel = document.getElementById('tradeFilterDropdown');
+  const btn = document.getElementById('tradeFilterBtn');
+  if (!panel || !btn) return;
+  const opening = panel.style.display !== 'block';
+  if (opening) {
+    // Positioned as fixed (not relative to the filter bar) because the
+    // filter bar scrolls horizontally on mobile — an ancestor with
+    // overflow-x:auto also clips vertical overflow per the CSS spec, which
+    // would cut the dropdown off rather than letting it float over the
+    // page. Fixed + computed position avoids that entirely.
+    const r = btn.getBoundingClientRect();
+    const panelWidth = Math.max(190, r.width);
+    let left = r.left;
+    if (left + panelWidth > window.innerWidth - 16) left = window.innerWidth - panelWidth - 16;
+    if (left < 16) left = 16;
+    panel.style.left = left + 'px';
+    panel.style.top = (r.bottom + 6) + 'px';
+  }
+  panel.style.display = opening ? 'block' : 'none';
+  btn.classList.toggle('open', opening);
+}
+
+// A fixed-position dropdown won't track the button as the sticky filter
+// bar scrolls, so just close it on scroll rather than repositioning.
+window.addEventListener('scroll', () => {
+  const panel = document.getElementById('tradeFilterDropdown');
+  if (panel && panel.style.display === 'block') {
+    panel.style.display = 'none';
+    document.getElementById('tradeFilterBtn')?.classList.remove('open');
+  }
+}, { passive: true });
+
+// A single click outside the dropdown closes it, same pattern used for the
+// mobile nav panel elsewhere in this file.
+document.addEventListener('click', (e) => {
+  const group = document.getElementById('tradeFilterGroup');
+  const panel = document.getElementById('tradeFilterDropdown');
+  if (!group || !panel || panel.style.display !== 'block') return;
+  if (!group.contains(e.target)) {
+    panel.style.display = 'none';
+    document.getElementById('tradeFilterBtn')?.classList.remove('open');
+  }
+});
+
+function toggleTradeFilterOption(trade){
+  if (currentTradeFilters.has(trade)) currentTradeFilters.delete(trade);
+  else currentTradeFilters.add(trade);
+  renderTradeFilterUI();
+  if (contractorsLoaded) applyFilters();
+}
+
+// Called by the homepage "What do you need fixed?" category pills — a pill
+// click replaces any existing trade filter with just that one trade. Once
+// on the results page, the Trade dropdown in the filter bar lets the user
+// switch to a different trade or add more, without going back home.
 function filterByTrade(trade){
-  currentTradeFilter = trade;
+  currentTradeFilters = new Set([trade]);
   showPage('contractors');
-  renderTradeFilterChip();
+  renderTradeFilterUI();
   if (contractorsLoaded) applyFilters();
 }
 
 function clearTradeFilter(){
-  currentTradeFilter = null;
-  renderTradeFilterChip();
+  currentTradeFilters = new Set();
+  renderTradeFilterUI();
   applyFilters();
 }
 
@@ -4232,8 +4312,8 @@ async function performSearch(){
   // A free-text term that isn't a known category just falls back to the
   // location-based results without a trade filter.
   const matchedTrade = JOB_SEARCH_CATEGORIES.find(c => c.toLowerCase() === jobVal.toLowerCase());
-  currentTradeFilter = matchedTrade || null;
-  renderTradeFilterChip();
+  currentTradeFilters = matchedTrade ? new Set([matchedTrade]) : new Set();
+  renderTradeFilterUI();
 
   // Carry the distance picked in the hero search bar into the filter bar,
   // and apply it immediately so results are pre-filtered by the time they land.
