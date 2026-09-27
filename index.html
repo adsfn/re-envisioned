@@ -346,7 +346,7 @@ nav.scrolled .btn-nav-outline:hover { background: #1558a8; color: #fff; }
 .trade-filter-btn.open svg { transform: rotate(180deg); }
 .trade-filter-btn:hover, .trade-filter-btn.open { border-color: #1558a8; }
 .trade-filter-btn.active { border-color: #1558a8; background: #eaf1fb; color: #1558a8; }
-.trade-filter-dropdown { display: none; position: fixed; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.14); padding: 8px; min-width: 190px; max-width: calc(100vw - 32px); z-index: 150; }
+.trade-filter-dropdown { display: none; position: fixed; background: #fff; border: 1.5px solid #94a5bd; border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.18); padding: 8px; min-width: 190px; max-width: calc(100vw - 32px); z-index: 150; }
 .trade-filter-option { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #334; cursor: pointer; white-space: nowrap; }
 .trade-filter-option:hover { background: #f1f5f9; }
 .trade-filter-option.checked { color: #1558a8; }
@@ -3966,8 +3966,17 @@ function toggleTradeDropdown(){
   if (!panel || !btn) return;
   const opening = panel.style.display !== 'block';
   if (opening) {
-    // Positioned as fixed (not relative to the filter bar) because the
-    // filter bar scrolls horizontally on mobile — an ancestor with
+    // Re-parent to <body> before positioning. `.filter-bar` uses
+    // backdrop-filter for its glass effect, and per spec backdrop-filter
+    // (like transform/filter) creates a new containing block for
+    // position:fixed descendants — so while nested under it, "fixed" was
+    // actually being resolved relative to the filter bar's own box, not
+    // the viewport, which is why the panel could land nowhere near the
+    // button. Moving it to <body> guarantees normal viewport-relative
+    // fixed positioning everywhere, mobile included.
+    if (panel.parentElement !== document.body) document.body.appendChild(panel);
+    // Positioned as fixed (rather than relative to the filter bar) because
+    // the filter bar scrolls horizontally on mobile — an ancestor with
     // overflow-x:auto also clips vertical overflow per the CSS spec, which
     // would cut the dropdown off rather than letting it float over the
     // page. Fixed + computed position avoids that entirely.
@@ -3994,12 +4003,15 @@ window.addEventListener('scroll', () => {
 }, { passive: true });
 
 // A single click outside the dropdown closes it, same pattern used for the
-// mobile nav panel elsewhere in this file.
+// mobile nav panel elsewhere in this file. Checks both the button's group
+// and the panel itself, since the panel now lives under <body> (moved
+// there in toggleTradeDropdown to escape the filter bar's backdrop-filter
+// containing block) rather than nested inside the group.
 document.addEventListener('click', (e) => {
   const group = document.getElementById('tradeFilterGroup');
   const panel = document.getElementById('tradeFilterDropdown');
   if (!group || !panel || panel.style.display !== 'block') return;
-  if (!group.contains(e.target)) {
+  if (!group.contains(e.target) && !panel.contains(e.target)) {
     panel.style.display = 'none';
     document.getElementById('tradeFilterBtn')?.classList.remove('open');
   }
