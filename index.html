@@ -25,6 +25,12 @@ button, .btn-nav-primary, .btn-nav-outline, .search-btn, .btn-card,
 .user-avatar {
   -webkit-tap-highlight-color: transparent;
 }
+/* Native button chrome (especially on mobile Safari) can impose its own
+   padding/min-height/font metrics on <button> elements even after
+   background/border are cleared — this was throwing off vertical centering
+   for icon-only buttons like the mobile nav hamburger, which sat slightly
+   off-center next to the logo text as a result. */
+button { appearance: none; -webkit-appearance: none; font: inherit; }
 .ic { width: 1em; height: 1em; display: inline-block; vertical-align: -0.15em; flex-shrink: 0; }
 .star-ic { color: #f59e0b; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1a2535; }
@@ -32,8 +38,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 /* NAV */
 nav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; padding: 0 40px; height: 64px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; transition: all .3s; }
 nav.scrolled { background: rgba(255,255,255,.62); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); box-shadow: 0 4px 24px rgba(15,52,96,.12), inset 0 1px 0 rgba(255,255,255,.6); border-bottom: 1px solid rgba(255,255,255,.5); }
-.nav-hamburger { display: none; background: none; border: none; cursor: pointer; padding: 8px; width: 44px; height: 44px; align-items: center; justify-content: center; border-radius: 8px; }
-.nav-hamburger svg { width: 22px; height: 22px; color: #fff; transition: color .3s; }
+.nav-hamburger { display: none; background: none; border: none; cursor: pointer; padding: 8px; width: 44px; height: 44px; align-items: center; justify-content: center; border-radius: 8px; line-height: 0; }
+.nav-hamburger svg { width: 22px; height: 22px; color: #fff; transition: color .3s; display: block; }
 nav.scrolled .nav-hamburger svg { color: #1558a8; }
 .nav-hamburger:hover { background: rgba(255,255,255,.15); }
 @media (max-width: 900px) {
@@ -2239,13 +2245,21 @@ async function loadHomepagePros() {
 // location" in the search bar, this never prompts the user with a toast on
 // failure; it just resolves null and loadHomepagePros() falls back to
 // top-rated. Reuses whatever precise coordinates the search bar may have
-// already captured this session instead of asking twice.
+// already captured this session instead of asking twice, and — when it
+// resolves a fresh reading itself — writes it back to preciseGeoCoords too,
+// so a location the browser already granted doesn't only benefit this one
+// widget. (Previously it only ever resolved the coords locally without
+// saving them, which is why other features like the homepage category
+// pills never got to use a location the user had already allowed.)
 function getHomepageLocation() {
   return new Promise((resolve) => {
     if (preciseGeoCoords) { resolve(preciseGeoCoords); return; }
     if (!navigator.geolocation) { resolve(null); return; }
     navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (pos) => {
+        preciseGeoCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude, place: 'your location' };
+        resolve(preciseGeoCoords);
+      },
       () => resolve(null),
       { enableHighAccuracy: false, timeout: 6000, maximumAge: 300000 }
     );
@@ -4028,9 +4042,22 @@ function toggleTradeFilterOption(trade){
 // click replaces any existing trade filter with just that one trade. Once
 // on the results page, the Trade dropdown in the filter bar lets the user
 // switch to a different trade or add more, without going back home.
-function filterByTrade(trade){
+async function filterByTrade(trade){
   currentTradeFilters = new Set([trade]);
+
+  // Reuse whatever location the browser has already granted this session
+  // (same helper the homepage "near you" widget uses), or silently ask for
+  // it if it hasn't been resolved yet — mirrors what performSearch() does,
+  // since pill clicks used to skip this entirely and always land on the
+  // full, unsorted list with no map centering, even for a user who'd
+  // already said yes to location. Only overwrites searchedZipCoords when a
+  // location is actually available, so a prior zip-based search isn't
+  // wiped out just because this particular lookup failed/was denied.
+  const coords = await getHomepageLocation();
+  if (coords) searchedZipCoords = coords;
+
   showPage('contractors');
+  if (searchedZipCoords) setResultsView('map');
   renderTradeFilterUI();
   if (contractorsLoaded) applyFilters();
 }
