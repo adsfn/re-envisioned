@@ -1927,7 +1927,16 @@ function closeMobileNav() {
 document.addEventListener('click', e => {
   const links = document.getElementById('navLinks');
   const hamburger = document.getElementById('navHamburger');
-  if (links && links.classList.contains('mobile-open') && !links.contains(e.target) && hamburger && !hamburger.contains(e.target)) {
+  // Uses composedPath() instead of .contains(e.target): toggleMobileNav()
+  // replaces the hamburger icon's <line> elements via innerHTML (morphing
+  // ☰ into ✕) on the very click that opens the menu, which detaches the
+  // exact node the user clicked from the DOM mid-bubble. A detached node
+  // can't be "contained" by anything, so the old .contains(e.target) check
+  // would wrongly read as "clicked outside" and immediately re-close the
+  // menu it had just opened. composedPath() is a snapshot taken at
+  // dispatch time, before that mutation, so it isn't affected.
+  const path = e.composedPath ? e.composedPath() : [e.target];
+  if (links && links.classList.contains('mobile-open') && !path.includes(links) && hamburger && !path.includes(hamburger)) {
     closeMobileNav();
   }
 });
