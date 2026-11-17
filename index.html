@@ -1965,8 +1965,8 @@ function updateNav() {
   const scrolled = document.getElementById('mainNav').classList.contains('scrolled');
   if (currentUser) {
     const initials = (currentUser.first[0]+(currentUser.last[0]||'')).toUpperCase();
-    const avatarInner = userAvatarPhoto ? `<img src="${userAvatarPhoto}" alt="">` : initials;
-    nr.innerHTML = `<span class="nav-greeting">Hi, ${currentUser.first}!</span>
+    const avatarInner = userAvatarPhoto ? `<img src="${attrUrl(userAvatarPhoto)}" alt="">` : initials;
+    nr.innerHTML = `<span class="nav-greeting">Hi, ${escapeHtml(currentUser.first)}!</span>
       <div class="user-avatar" onclick="toggleDropdown()" id="userAvatar">${avatarInner}
         <div class="user-dropdown" id="userDropdown">
           <div class="dropdown-item" onclick="requireAuth('edit-profile')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg> My Profile</div>
@@ -2127,10 +2127,10 @@ async function handlePostOAuthRole() {
 async function loadCurrentUser() {
   const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) { currentUser = null; return; }
+  // Email/phone aren't readable through the profiles table (so other users
+  // can't harvest them); get_my_profile() returns only the caller's own row.
   const { data: profile, error } = await supabaseClient
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
+    .rpc('get_my_profile')
     .single();
   if (error || !profile) { currentUser = null; return; }
   currentUser = {
@@ -2322,7 +2322,7 @@ async function loadHomepagePros() {
       ? `<span class="badge-verified"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 6 9 17l-5-5"/></svg> Verified</span>`
       : '';
     return `<div class="contractor-card real-card" onclick="viewContractorProfile('${c.id}')">
-      <div class="card-img" style="background-image:url('${img}');"><div class="card-img-overlay"></div>${verifiedBadge}<div class="card-rating"><span class="star"><svg class="ic star-ic" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.8 21.1 7 14.2 2 9.3l6.9-1z"/></svg></span>${rating}</div></div>
+      <div class="card-img" style="background-image:url('${cssUrl(img)}');"><div class="card-img-overlay"></div>${verifiedBadge}<div class="card-rating"><span class="star"><svg class="ic star-ic" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.8 21.1 7 14.2 2 9.3l6.9-1z"/></svg></span>${rating}</div></div>
       <div class="card-body">
         <div class="card-name">${escapeHtml(name)}</div>
         <div class="card-trade">${escapeHtml(c.trade || '')}</div>
@@ -2370,7 +2370,7 @@ function showSuccess(title,msg){
   const icon = document.getElementById('successIcon');
   if (icon) {
     icon.innerHTML = userAvatarPhoto
-      ? `<img src="${userAvatarPhoto}" alt="">`
+      ? `<img src="${attrUrl(userAvatarPhoto)}" alt="">`
       : '<svg class="ic" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="11" fill="#1558a8"/><path d="M7.5 12.5l2.8 2.8 6.2-6.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   }
 }
@@ -2447,7 +2447,7 @@ function renderBookingCard(b, isContractor, contractor) {
 
   // filterStatus drives the All/Upcoming/Completed tabs above.
   const filterStatus = b.status === 'completed' ? 'completed' : 'upcoming';
-  const statusLabel = cap(b.status || 'pending');
+  const statusLabel = escapeHtml(cap(b.status || 'pending'));
   const statusClass = `status-${b.status === 'completed' ? 'completed' : (b.status === 'cancelled' ? 'cancelled' : 'upcoming')}`;
 
   let priceHtml, actionsHtml;
@@ -2820,7 +2820,7 @@ async function loadChatList(){
     const time = lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
     const initials = displayName.split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
     return `
-      <div class="convo-card" onclick="openChatThread('${b.id}', ${JSON.stringify(displayName)})">
+      <div class="convo-card" onclick="openChatThread('${escapeHtml(b.id)}', ${escapeHtml(JSON.stringify(displayName))})">
         <div class="convo-avatar-wrap">
           <div class="convo-avatar">${escapeHtml(initials)}</div>
           <div class="convo-online-dot"></div>
@@ -2991,7 +2991,7 @@ function loadProfileForm(){
   document.getElementById('pfEmail').value = email;
   const avatar = document.getElementById('profileAvatarPreview');
   const initials = ((first[0]||'') + (last[0]||'')).toUpperCase() || 'U';
-  avatar.innerHTML = userAvatarPhoto ? `<img src="${userAvatarPhoto}" alt="">` : initials;
+  avatar.innerHTML = userAvatarPhoto ? `<img src="${attrUrl(userAvatarPhoto)}" alt="">` : initials;
   setFieldError('pfFirst','pfFirstErr',false);
   setFieldError('pfEmail','pfEmailErr',false);
 }
@@ -3006,7 +3006,7 @@ async function handleAvatarUpload(file){
   // Show an instant local preview while the real upload runs in the background.
   const localPreview = URL.createObjectURL(file);
   const avatar = document.getElementById('profileAvatarPreview');
-  if (avatar) avatar.innerHTML = `<img src="${localPreview}" alt="">`;
+  if (avatar) avatar.innerHTML = `<img src="${attrUrl(localPreview)}" alt="">`;
 
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
   const path = `${currentUser.id}/avatar.${ext}`;
@@ -3037,7 +3037,7 @@ async function handleAvatarUpload(file){
 
   if (userAvatarPhoto && userAvatarPhoto.startsWith('blob:')) URL.revokeObjectURL(userAvatarPhoto);
   userAvatarPhoto = publicUrl;
-  if (avatar && publicUrl) avatar.innerHTML = `<img src="${publicUrl}" alt="">`;
+  if (avatar && publicUrl) avatar.innerHTML = `<img src="${attrUrl(publicUrl)}" alt="">`;
   updateNav();
   showToast('Photo updated!', 'success');
   document.getElementById('avatarFileInput').value = '';
@@ -3093,7 +3093,8 @@ const TOAST_ICONS = {
 function showToast(msg, type){
   const t=document.getElementById('toast');
   const icon = TOAST_ICONS[type] || TOAST_ICONS.success;
-  t.innerHTML = `<span class="toast-icon">${icon}</span><span>${msg}</span>`;
+  t.innerHTML = `<span class="toast-icon">${icon}</span><span></span>`;
+  t.lastElementChild.textContent = msg;
   t.classList.add('show');
   clearTimeout(t._hideTimer);
   t._hideTimer = setTimeout(()=>t.classList.remove('show'),2800);
@@ -3403,10 +3404,36 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp
    Storage upload flows for license documents (private bucket,
    feeds the admin review queue) and portfolio photos.
    ============================================================ */
+// Escapes text for HTML element content AND quoted attribute values.
+// (The old textContent→innerHTML trick left " and ' unescaped, so any
+// value placed inside an attribute could break out of it.)
 function escapeHtml(str){
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Returns the URL only if it uses a safe scheme (blocks javascript: etc.),
+// otherwise ''. Local previews use blob: URLs, so those are allowed too.
+function safeUrl(u){
+  if (!u) return '';
+  try {
+    const parsed = new URL(String(u), location.href);
+    return ['https:', 'http:', 'blob:'].includes(parsed.protocol) ? parsed.href : '';
+  } catch { return ''; }
+}
+
+// For src="" / href="" attributes.
+function attrUrl(u){ return escapeHtml(safeUrl(u)); }
+
+// For style="background-image:url('…')". Attribute escaping alone is not
+// enough here: the browser decodes &#39; back to ' before CSS parses it,
+// so the characters that end a CSS url() are percent-encoded first.
+function cssUrl(u){
+  return escapeHtml(safeUrl(u).replace(/['"()\\\s]/g, c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0').toUpperCase()));
 }
 
 function formatFileSize(bytes){
@@ -3482,7 +3509,7 @@ function renderCertFiles(){
   const removeIcon = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>';
   list.innerHTML = certFiles.map((f, i) => `
     <div class="file-chip" data-uid="${f.uid}">
-      ${f.isImage ? `<img class="thumb" src="${f.url}" alt="">` : fileIcon}
+      ${f.isImage ? `<img class="thumb" src="${attrUrl(f.url)}" alt="">` : fileIcon}
       <div class="file-info">
         <div class="file-name">${escapeHtml(f.name)}</div>
         <div class="file-size">${f.uploading ? 'Uploading…' : formatFileSize(f.size)}</div>
@@ -3568,7 +3595,7 @@ function renderPortfolioPhotos(){
   const removeIcon = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>';
   grid.innerHTML = portfolioPhotos.map((p, i) => `
     <div class="photo-preview" data-uid="${p.uid}" style="${p.uploading ? 'opacity:.55;' : ''}">
-      <img src="${p.publicUrl || p.url}" alt="${escapeHtml(p.name)}">
+      <img src="${attrUrl(p.publicUrl || p.url)}" alt="${escapeHtml(p.name)}">
       <button type="button" class="photo-remove" onclick="event.stopPropagation();removePortfolioPhoto(${i})" aria-label="Remove photo">${removeIcon}</button>
       ${p.uploading ? '<div class="upload-progress-track"><div class="upload-progress-bar" style="width:100%"></div></div>' : ''}
     </div>
@@ -3705,6 +3732,9 @@ async function verifyLicense(){
     if (data.verified && data.status === 'ACTIVE') {
       lastVerifiedLicense = { number: lic, type: licenseType, status: data.status };
       showToast(`Verified! Active NYC DOB license — ${data.matchedName || submittedName}`, 'success');
+    } else if (data.status === 'ALREADY_CLAIMED') {
+      lastVerifiedLicense = null;
+      showToast(`That license is already verified on another Revise account. Upload a photo of your license below and our team will review it.`, 'error');
     } else if (data.status === 'NAME_MISMATCH') {
       lastVerifiedLicense = null;
       showToast(`That license number is active in NYC DOB records, but it's registered to a different name/business — double check the number`, 'error');
@@ -3962,7 +3992,7 @@ function renderContractorCards(){
     const tradesAttr = escapeHtml(tradesList.join('|'));
     const tradesLabel = tradesList.map(t => escapeHtml(t)).join(', ');
     return `<div class="contractor-card real-card" data-rating="${rating}" data-price="${maxPrice}" data-distance="${distAttr}" data-trades="${tradesAttr}" onclick="viewContractorProfile('${c.id}')">
-      <div class="card-img" style="background-image:url('${img}');"><div class="card-img-overlay"></div>${verifiedBadge}<div class="card-rating"><span class="star"><svg class="ic star-ic" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.8 21.1 7 14.2 2 9.3l6.9-1z"/></svg></span>${rating}</div></div>
+      <div class="card-img" style="background-image:url('${cssUrl(img)}');"><div class="card-img-overlay"></div>${verifiedBadge}<div class="card-rating"><span class="star"><svg class="ic star-ic" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.8 21.1 7 14.2 2 9.3l6.9-1z"/></svg></span>${rating}</div></div>
       <div class="card-body">
         <div class="card-name">${escapeHtml(name)}</div>
         <div class="card-trade">${tradesLabel}${c.service_area ? ' · ' + escapeHtml(c.service_area) : ''}</div>

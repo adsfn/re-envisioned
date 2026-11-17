@@ -128,6 +128,13 @@ Deno.serve(async (req) => {
           console.error("checkout.session.completed had no booking_id in metadata");
           break;
         }
+        // "completed" only means the customer finished checkout. With delayed
+        // payment methods (e.g. bank debits) the money hasn't arrived yet, so
+        // only mark the booking paid once Stripe says the payment succeeded.
+        if (session.payment_status !== "paid") {
+          console.log(`Checkout ${session.id} completed with payment_status=${session.payment_status}; not marking paid`);
+          break;
+        }
 
         const { error } = await supabaseAdmin
           .from("bookings")

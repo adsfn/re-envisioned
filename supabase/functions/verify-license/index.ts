@@ -115,8 +115,22 @@ function normalizeName(s: string | null | undefined): string {
 
 function namesLooselyMatch(a: string, b: string): boolean {
   if (!a || !b) return false;
-  if (a.length < 3 || b.length < 3) return a === b;
-  return a.includes(b) || b.includes(a);
+  if (a === b) return true;
+  // Only accept the submitted name CONTAINING the full DOB name, never the
+  // reverse. The old two-way substring check let a short fragment such as
+  // "SMITH" match "JOHN SMITH", so a guessed surname could verify.
+  if (b.length < 5) return false;
+  return ` ${a} `.includes(` ${b} `);
+}
+
+// Every word of the licensee's first + last name must appear in the
+// submitted name (in any order), e.g. "Smith & Sons" does not match
+// "JOHN SMITH", but "John Smith Plumbing" does.
+function containsAllNameTokens(submitted: string, row: Record<string, string>): boolean {
+  const tokens = normalizeName(`${row.first_name || ""} ${row.last_name || ""}`).split(" ").filter(Boolean);
+  if (tokens.length < 2) return false;
+  const have = new Set(submitted.split(" "));
+  return tokens.every((t) => have.has(t));
 }
 
 function recordMatchesSubmittedName(submittedName: string, row: Record<string, string>): boolean {
@@ -124,10 +138,8 @@ function recordMatchesSubmittedName(submittedName: string, row: Record<string, s
   if (!submitted) return false;
 
   const business = normalizeName(row.business_name);
-  const fullName = normalizeName(`${row.first_name || ""} ${row.last_name || ""}`);
-  const lastFirst = normalizeName(`${row.last_name || ""} ${row.first_name || ""}`);
-
-  return [business, fullName, lastFirst].some(candidate => namesLooselyMatch(submitted, candidate));
+  if (business && namesLooselyMatch(submitted, business)) return true;
+  return containsAllNameTokens(submitted, row);
 }
 
 Deno.serve(async (req) => {
@@ -214,6 +226,26 @@ Deno.serve(async (req) => {
     const isVerified = status === "ACTIVE";
 
     if (isVerified) {
+      // One license, one account. DOB names and license numbers are public,
+      // so without this anyone could look up a real plumber and claim their
+      // license on a second account. A genuine licensee who finds their
+      // license already claimed goes through manual review instead.
+      const { data: claimedBy, error: claimError } = await supabaseAdmin
+        .from("contractors")
+        .select("id")
+        .eq("license_number", licenseNumber)
+        .eq("license_type", licenseType)
+        .eq("license_verified", true)
+        .neq("id", callerId)
+        .limit(1);
+      if (claimError) {
+        console.error("Failed to check existing license claims:", claimError);
+        return jsonResponse({ error: "Internal error during license lookup" }, 500);
+      }
+      if (claimedBy && claimedBy.length > 0) {
+        return jsonResponse({ verified: false, status: "ALREADY_CLAIMED" });
+      }
+
       const { data: existingRow } = await supabaseAdmin
         .from("contractors")
         .select("id")
@@ -228,9 +260,11 @@ Deno.serve(async (req) => {
         review_status: "approved",
         reviewed_at: new Date().toISOString(),
         review_notes: `Auto-verified via NYC DOB License Info (license #${licenseNumber}, ${licenseType}).`,
+        // The Verified badge must sit on the name that matched DOB's record,
+        // not on whatever business name the account had before.
+        business_name: submittedName,
       };
       if (!existingRow) {
-        writePayload.business_name = submittedName;
         writePayload.trade =
           licenseType === "MASTER PLUMBER" ? "Plumbing" :
           licenseType === "ELECTRICAL CONTRACTOR" ? "Electrical" : "General";

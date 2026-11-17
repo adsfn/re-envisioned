@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     // Stripe expects amounts in cents.
     const amountInCents = Math.round(Number(booking.price_amount) * 100);
 
-    const origin = req.headers.get("origin") || "https://re-envisioned.vercel.app";
+    const origin = trustedOrigin(req);
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: [
@@ -113,9 +113,23 @@ Deno.serve(async (req) => {
     return jsonResponse({ url: checkoutSession.url });
   } catch (err) {
     console.error(err);
-    return jsonResponse({ error: err instanceof Error ? err.message : "Unknown error" }, 500);
+    // Don't echo internal/Stripe error details to the browser.
+    return jsonResponse({ error: "Couldn't start checkout. Please try again." }, 500);
   }
 });
+
+// Stripe redirects back to this origin after payment. Only allow the real
+// site (and local dev) so a crafted Origin header can't send the user
+// somewhere else after they pay.
+const ALLOWED_ORIGINS = new Set([
+  "https://re-envisioned.vercel.app",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+]);
+function trustedOrigin(req: Request): string {
+  const origin = req.headers.get("origin") || "";
+  return ALLOWED_ORIGINS.has(origin) ? origin : "https://re-envisioned.vercel.app";
+}
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {

@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
     // 4. Generate a one-time onboarding link. These expire quickly (a few
     //    minutes) and are single-use, so we create a fresh one on every call
     //    rather than trying to reuse/cache it.
-    const origin = req.headers.get("origin") || "https://re-envisioned.vercel.app";
+    const origin = trustedOrigin(req);
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
       refresh_url: `${origin}/?page=my-bookings&stripe=refresh`,
@@ -108,9 +108,22 @@ Deno.serve(async (req) => {
     return jsonResponse({ url: accountLink.url });
   } catch (err) {
     console.error(err);
-    return jsonResponse({ error: err instanceof Error ? err.message : "Unknown error" }, 500);
+    // Don't echo internal/Stripe error details to the browser.
+    return jsonResponse({ error: "Couldn't start bank setup. Please try again." }, 500);
   }
 });
+
+// Stripe redirects back to this origin after onboarding. Only allow the
+// real site (and local dev) so a crafted Origin header can't redirect.
+const ALLOWED_ORIGINS = new Set([
+  "https://re-envisioned.vercel.app",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+]);
+function trustedOrigin(req: Request): string {
+  const origin = req.headers.get("origin") || "";
+  return ALLOWED_ORIGINS.has(origin) ? origin : "https://re-envisioned.vercel.app";
+}
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
